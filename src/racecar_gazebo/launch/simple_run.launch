@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<launch>
+    <!-- <arg name="world_name" default="racecar" /> -->
+    <!-- <arg name="world_name" default="racecar_ar" /> -->
+    <!-- <arg name="world_name" default="racecar_parking_1" /> -->
+    <arg name="world_name" default="racecar_tunnel" />
+    <!-- <arg name="world_name" default="racecar_walker" /> -->
+
+    <include file="$(find racecar_gazebo)/launch/racecar.launch">
+        <arg name="world_name" value="$(arg world_name)" />
+    </include>
+
+    <!-- keyop control -->
+    <rosparam command="load" file="$(find racecar_gazebo)/config/keyboard_teleop.yaml" />
+    <node pkg="racecar_gazebo" type="keyboard_teleop.py" name="keyboard_teleop" />
+</launch>
