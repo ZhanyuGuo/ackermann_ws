@@ -53,8 +53,8 @@ class OdometryNode:
 
         cmd = Odometry()
         cmd.header.stamp = self.last_recieved_stamp
-        cmd.header.frame_id = "map"
-        cmd.child_frame_id = "odom"
+        cmd.header.frame_id = "odom"      #  map -> odom
+        cmd.child_frame_id = "base_link"  # odom -> base_link
         cmd.pose.pose = self.last_received_pose
         cmd.twist.twist = self.last_received_twist
         self.pub_odom.publish(cmd)
