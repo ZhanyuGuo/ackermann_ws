@@ -3,8 +3,8 @@
     <!-- <arg name="world_name" default="racecar" /> -->
     <!-- <arg name="world_name" default="racecar_ar" /> -->
     <!-- <arg name="world_name" default="racecar_parking_1" /> -->
-    <arg name="world_name" default="racecar_tunnel" />
-    <!-- <arg name="world_name" default="racecar_walker" /> -->
+    <!-- <arg name="world_name" default="racecar_tunnel" /> -->
+    <arg name="world_name" default="racecar_walker" />
 
     <include file="$(find racecar_gazebo)/launch/racecar.launch">
         <arg name="world_name" value="$(arg world_name)" />
