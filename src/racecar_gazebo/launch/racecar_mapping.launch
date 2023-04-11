@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<launch>
+    <!-- <arg name="world_name" default="racecar" /> -->
+    <!-- <arg name="world_name" default="racecar_ar" /> -->
+    <!-- <arg name="world_name" default="racecar_parking_1" /> -->
+    <!-- <arg name="world_name" default="racecar_tunnel" /> -->
+    <arg name="world_name" default="racecar_walker" />
+    <arg name="publish_tf_map" default="false" />
+
+    <include file="$(find racecar_gazebo)/launch/racecar.launch">
+        <arg name="world_name" value="$(arg world_name)" />
+        <arg name="publish_tf_map" value="$(arg publish_tf_map)" />
+    </include>
+
+    <!-- keyop -->
+    <rosparam command="load" file="$(find racecar_gazebo)/config/keyboard_teleop.yaml" />
+    <node pkg="racecar_gazebo" type="keyboard_teleop.py" name="keyboard_teleop" />
+
+    <!-- gmmaping -->
+    <include file="$(find racecar_gazebo)/launch/gmapping.launch" />
+
+    <!-- rviz -->
+    <node pkg="rviz" type="rviz" name="rviz" args="-d $(find racecar_gazebo)/config/gmapping.rviz" />
+</launch>

@@ -1,5 +1,7 @@
 <?xml version='1.0'?>
 <launch>
+    <arg name="publish_tf_map" default="true" />
+
     <!-- Load joint controller configurations from YAML file to parameter server -->
     <rosparam file="$(find racecar_control)/config/racecar_control.yaml" command="load" />
 
@@ -22,5 +24,7 @@
     </node>
 
     <!-- Allow for Gazebo to broadcast odom -->
-    <node pkg="racecar_gazebo" name="gazebo_odometry_node" type="gazebo_odometry.py" />
+    <node pkg="racecar_gazebo" name="gazebo_odometry_node" type="gazebo_odometry.py" >
+        <param name="~publish_tf_map" value="$(arg publish_tf_map)"/>
+    </node>
 </launch>

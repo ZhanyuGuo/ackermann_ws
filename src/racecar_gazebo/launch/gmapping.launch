@@ -1,3 +1,4 @@
+<?xml version="1.0"?>
 <launch>
     <node pkg="gmapping" type="slam_gmapping" name="slam_gmapping" output="screen">
         <param name="base_frame" value="base_link" />
@@ -42,6 +43,4 @@
 
         <param name="occ_thresh" value="0.25" />
     </node>
-
-    <node pkg="rviz" type="rviz" name="rviz" args="-d $(find racecar_gazebo)/config/gmapping.rviz" />
 </launch>

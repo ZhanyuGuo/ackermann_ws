@@ -34,6 +34,9 @@ class OdometryNode:
         # Set subscribers
         rospy.Subscriber("/gazebo/link_states", LinkStates, self.sub_robot_pose_update)
 
+        # flag publish tf map -> odom
+        self.publish_tf_map = rospy.get_param("~publish_tf_map", True)
+
     def sub_robot_pose_update(self, msg):
         # Find the index of the racecar
         try:
@@ -53,7 +56,7 @@ class OdometryNode:
 
         cmd = Odometry()
         cmd.header.stamp = self.last_recieved_stamp
-        cmd.header.frame_id = "odom"      #  map -> odom
+        cmd.header.frame_id = "odom"  #  map -> odom
         cmd.child_frame_id = "base_link"  # odom -> base_link
         cmd.pose.pose = self.last_received_pose
         cmd.twist.twist = self.last_received_twist
@@ -65,6 +68,20 @@ class OdometryNode:
             transform=Transform(translation=cmd.pose.pose.position, rotation=cmd.pose.pose.orientation),
         )
         self.tf_pub.sendTransform(tf)
+
+        if self.publish_tf_map:
+            cmd = Odometry()
+            cmd.header.stamp = self.last_recieved_stamp
+            cmd.header.frame_id = "map"  #  map -> odom
+            cmd.child_frame_id = "odom"  # odom -> base_link
+            cmd.pose.pose.orientation.w = 1
+            # 0 transform from map to odom
+            tf = TransformStamped(
+                header=Header(frame_id=cmd.header.frame_id, stamp=cmd.header.stamp),
+                child_frame_id=cmd.child_frame_id,
+                transform=Transform(translation=cmd.pose.pose.position, rotation=cmd.pose.pose.orientation)
+            )
+            self.tf_pub.sendTransform(tf)
 
 
 # Start the node

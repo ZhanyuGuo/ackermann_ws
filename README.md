@@ -7,7 +7,7 @@ git clone https://github.com/ZhanyuGuo/ackermann_ws.git
 cd ackermann_ws/
 catkin_make
 source devel/setup.bash
-roslaunch racecar_gazebo simple_run.launch
+roslaunch racecar_gazebo racecar_keyop.launch
 ```
 
 NOTE: You can disable the visualization of laser in **line 65** of `racecar_description/urdf/racecar.gazebo`.
