@@ -24,7 +24,7 @@
     </node>
 
     <!-- Allow for Gazebo to broadcast odom -->
-    <node pkg="racecar_gazebo" name="gazebo_odometry_node" type="gazebo_odometry.py" >
-        <param name="~publish_tf_map" value="$(arg publish_tf_map)"/>
+    <node pkg="racecar_gazebo" name="gazebo_odometry_node" type="gazebo_odometry.py">
+        <param name="~publish_tf_map" value="$(arg publish_tf_map)" />
     </node>
 </launch>
