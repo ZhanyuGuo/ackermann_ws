@@ -1,0 +1,58 @@
+<?xml version="1.0"?>
+<launch>
+    <arg name="world_name" default="racecar_walker" />
+
+    <!-- Load map -->
+    <node name="map_server" pkg="map_server" type="map_server" args="$(find racecar_gazebo)/map/$(arg world_name).yaml" />
+
+    <!-- move base -->
+    <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
+        <rosparam file="$(find racecar_gazebo)/config/costmap_common_params.yaml" command="load" ns="global_costmap" />
+        <rosparam file="$(find racecar_gazebo)/config/costmap_common_params.yaml" command="load" ns="local_costmap" />
+        <rosparam file="$(find racecar_gazebo)/config/local_costmap_params.yaml" command="load" />
+        <rosparam file="$(find racecar_gazebo)/config/global_costmap_params.yaml" command="load" />
+        <!-- <rosparam file="$(find racecar_gazebo)/config/teb_local_planner_params.yaml" command="load" /> -->
+        <!-- <rosparam file="$(find racecar_gazebo)/config/mpc_local_planner_params.yaml" command="load" /> -->
+        <!-- <rosparam file="$(find racecar_gazebo)/config/pid_local_planner_params.yaml" command="load" /> -->
+
+        <!-- for graph_planner -->
+        <rosparam file="$(find sim_env)/config/planner/graph_planner_params.yaml" command="load" />
+        <!-- for sample_planner -->
+        <rosparam file="$(find sim_env)/config/planner/sample_planner_params.yaml" command="load" />
+        <!-- for dwa_planner -->
+        <rosparam file="$(find sim_env)/config/planner/dwa_planner_params.yaml" command="load" />
+        <!-- for pid_planner -->
+        <rosparam file="$(find sim_env)/config/planner/pid_planner_params.yaml" command="load" />
+
+        <!-- Default Global Planner -->
+        <!-- <param name="base_global_planner" value="global_planner/GlobalPlanner" /> -->
+        <!-- GraphPlanner -->
+        <param name="base_global_planner" value="graph_planner/GraphPlanner" />
+        <!-- options: a_star, jps, gbfs, dijkstra, d_star, lpa_star, d_star_lite -->
+        <param name="GraphPlanner/planner_name" value="a_star" />
+        <!-- SamplePlanner -->
+        <!-- <param name="base_global_planner" value="sample_planner/SamplePlanner" /> -->
+        <!-- options: rrt, rrt_star, informed_rrt, rrt_connect -->
+        <!-- <param name="SamplePlanner/planner_name" value="rrt_star" /> -->
+
+        <!-- Default Local Planner -->
+        <!-- <param name="base_local_planner" value="teb_local_planner/TebLocalPlannerROS" /> -->
+        <param name="base_local_planner" value="pid_planner/PIDPlanner" />
+        <!-- <param name="base_local_planner" value="dwa_planner/DWAPlanner" /> -->
+
+        <param name="planner_frequency" value="1.0" />
+        <param name="planner_patience" value="5.0" />
+        <!-- <param name="use_dijkstra" value="false" /> -->
+
+        <!-- <param name="base_local_planner" value="teb_local_planner/TebLocalPlannerROS" /> -->
+        <!-- <param name="base_local_planner" value="mpc_local_planner/MpcLocalPlannerROS" /> -->
+        <!-- <param name="base_local_planner" value="pid_local_planner/PidLocalPlannerROS" /> -->
+        <param name="controller_frequency" value="5.0" />
+        <param name="controller_patience" value="15.0" />
+
+        <param name="clearing_rotation_allowed" value="false" />
+    </node>
+
+    <!-- twist to ackermann -->
+    <node pkg="racecar_gazebo" type="ackermann_cmd.py" name="ackermann_cmd" output="screen" />
+</launch>
