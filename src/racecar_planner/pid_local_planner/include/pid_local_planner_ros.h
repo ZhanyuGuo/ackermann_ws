@@ -5,7 +5,7 @@
 #include <nav_core/base_local_planner.h>
 #include <base_local_planner/odometry_helper_ros.h>
 #include <tf2/utils.h>
-#include <tf2/LinearMath/Matrix3x3.h>
+// #include <tf2/LinearMath/Matrix3x3.h>
 #include <tf2_ros/buffer.h>
 #include <costmap_2d/costmap_2d_ros.h>
 #include <geometry_msgs/PoseStamped.h>
@@ -100,7 +100,13 @@ public:
    * @param ps  PoseStamped to calculate
    * @return  roll, pitch and yaw in XYZ order
    */
-  std::vector<double> getEulerAngles(geometry_msgs::PoseStamped& ps);
+  // std::vector<double> getEulerAngles(geometry_msgs::PoseStamped& ps);
+
+  /**
+   * @brief Regularize angle to [-pi, pi]
+   * @param angle the angle to regularize
+   */
+  void regularizeAngle(double& angle);
 
 private:
   /**
@@ -118,15 +124,15 @@ private:
    * @param x     result x
    * @param y     result y
    */
-  void getTransformedPosition(geometry_msgs::PoseStamped& src, double* x, double* y)
+  void getTransformedPosition(geometry_msgs::PoseStamped& src, double& x, double& y)
   {
     geometry_msgs::PoseStamped dst;
 
     src.header.stamp = ros::Time(0);
     tf_->transform(src, dst, base_frame_);
 
-    *x = dst.pose.position.x;
-    *y = dst.pose.position.y;
+    x = dst.pose.position.x;
+    y = dst.pose.position.y;
   }
 
   costmap_2d::Costmap2DROS* costmap_ros_;
@@ -137,7 +143,7 @@ private:
   int plan_index_;
 
   double x_, y_, theta_;
-  std::vector<double> final_rpy_;
+  // std::vector<double> final_rpy_;
 
   double p_window_, o_window_;        // next point distance/turning angle
   double p_precision_, o_precision_;  // goal reached tolerance

@@ -26,4 +26,6 @@ PidLocalPlannerROS:
   k_w_i: 0.01
   k_w_d: 0.10
 
-  k_theta: 0.50
+  k_theta: 0.5
+
+  step: 1

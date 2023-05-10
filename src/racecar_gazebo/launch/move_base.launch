@@ -12,18 +12,18 @@
         <rosparam file="$(find racecar_gazebo)/config/local_costmap_params.yaml" command="load" />
         <rosparam file="$(find racecar_gazebo)/config/global_costmap_params.yaml" command="load" />
         <!-- <rosparam file="$(find racecar_gazebo)/config/teb_local_planner_params.yaml" command="load" /> -->
-        <rosparam file="$(find racecar_gazebo)/config/mpc_local_planner_params.yaml" command="load" />
-        <!-- <rosparam file="$(find racecar_gazebo)/config/pid_local_planner_params.yaml" command="load" /> -->
+        <!-- <rosparam file="$(find racecar_gazebo)/config/mpc_local_planner_params.yaml" command="load" /> -->
+        <rosparam file="$(find racecar_gazebo)/config/pid_local_planner_params.yaml" command="load" />
 
         <param name="base_global_planner" value="global_planner/GlobalPlanner" />
-        <param name="planner_frequency" value="1.0" />
+        <param name="planner_frequency" value="10.0" />
         <param name="planner_patience" value="5.0" />
         <!-- <param name="use_dijkstra" value="false" /> -->
 
         <!-- <param name="base_local_planner" value="teb_local_planner/TebLocalPlannerROS" /> -->
-        <param name="base_local_planner" value="mpc_local_planner/MpcLocalPlannerROS" />
-        <!-- <param name="base_local_planner" value="pid_local_planner/PidLocalPlannerROS" /> -->
-        <param name="controller_frequency" value="5.0" />
+        <!-- <param name="base_local_planner" value="mpc_local_planner/MpcLocalPlannerROS" /> -->
+        <param name="base_local_planner" value="pid_local_planner/PidLocalPlannerROS" />
+        <param name="controller_frequency" value="10.0" />
         <param name="controller_patience" value="15.0" />
 
         <param name="clearing_rotation_allowed" value="false" />
