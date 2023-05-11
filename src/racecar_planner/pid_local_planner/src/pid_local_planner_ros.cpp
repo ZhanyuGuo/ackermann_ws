@@ -59,9 +59,9 @@ void PidLocalPlannerROS::initialize(std::string name, tf2_ros::Buffer* tf, costm
     nh.param("min_v", min_v_, 0.0);
     nh.param("max_v_inc", max_v_inc_, 0.5);
 
-    nh.param("max_w", max_w_, 1.57);
+    nh.param("max_w", max_w_, 1.0);
     nh.param("min_w", min_w_, 0.0);
-    nh.param("max_w_inc", max_w_inc_, 1.57);
+    nh.param("max_w_inc", max_w_inc_, 1.0);
 
     nh.param("k_v_p", k_v_p_, 1.00);
     nh.param("k_v_i", k_v_i_, 0.01);
@@ -110,7 +110,7 @@ bool PidLocalPlannerROS::setPlan(const std::vector<geometry_msgs::PoseStamped>& 
     return false;
   }
 
-  ROS_INFO("Got new plan");
+  // ROS_INFO("Got new plan");
 
   // set new plan
   global_plan_ = orig_global_plan;
@@ -239,6 +239,8 @@ bool PidLocalPlannerROS::computeVelocityCommands(geometry_msgs::Twist& cmd_vel)
     cmd_vel.linear.x = LinearPIDController(base_odom, b_x_d, b_y_d);
     cmd_vel.angular.z = AngularPIDController(base_odom, theta_d, theta_);
   }
+
+  ROS_INFO("velocity = %.2f m/s, omega = %.2f rad/s", cmd_vel.linear.x, cmd_vel.angular.z);
 
   // publish next target_ps_ pose
   target_ps_.header.frame_id = "map";
