@@ -11,11 +11,12 @@
         <rosparam file="$(find racecar_gazebo)/config/costmap_common_params.yaml" command="load" ns="local_costmap" />
         <rosparam file="$(find racecar_gazebo)/config/local_costmap_params.yaml" command="load" />
         <rosparam file="$(find racecar_gazebo)/config/global_costmap_params.yaml" command="load" />
-        <!-- <rosparam file="$(find racecar_gazebo)/config/teb_local_planner_params.yaml" command="load" /> -->
-        <!-- <rosparam file="$(find racecar_gazebo)/config/mpc_local_planner_params.yaml" command="load" /> -->
+        <rosparam file="$(find racecar_gazebo)/config/teb_local_planner_params.yaml" command="load" />
+        <rosparam file="$(find racecar_gazebo)/config/mpc_local_planner_params.yaml" command="load" />
         <rosparam file="$(find racecar_gazebo)/config/pid_local_planner_params.yaml" command="load" />
 
-        <param name="base_global_planner" value="global_planner/GlobalPlanner" />
+        <!-- <param name="base_global_planner" value="global_planner/GlobalPlanner" /> -->
+        <param name="base_global_planner" value="custom_path_global_planner/CustomPathGlobalPlannerROS" />
         <param name="planner_frequency" value="10.0" />
         <param name="planner_patience" value="5.0" />
         <!-- <param name="use_dijkstra" value="false" /> -->

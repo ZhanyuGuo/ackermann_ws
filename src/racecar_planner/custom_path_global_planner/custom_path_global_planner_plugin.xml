@@ -1,0 +1,7 @@
+<library path="lib/libcustom_path_global_planner">
+  <class name="custom_path_global_planner/CustomPathGlobalPlannerROS" type="custom_path_global_planner::CustomPathGlobalPlannerROS" base_class_type="nav_core::BaseGlobalPlanner">
+    <description>
+      custom path global_planner
+    </description>
+  </class>
+</library>
