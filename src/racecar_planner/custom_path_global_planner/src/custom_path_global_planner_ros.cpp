@@ -56,7 +56,7 @@ bool CustomPathGlobalPlannerROS::makePlan(const geometry_msgs::PoseStamped& star
   plan.clear();
 
   // ======== line ========
-  plan.push_back(start);
+  // plan.push_back(start);
   for (int i = 0; i < 20; i++)
   {
     geometry_msgs::PoseStamped new_goal = goal;
