@@ -55,19 +55,61 @@ bool CustomPathGlobalPlannerROS::makePlan(const geometry_msgs::PoseStamped& star
   // clear existing plan
   plan.clear();
 
-  // ======== line ========
+  /********
+   * Line *
+   ********/
   // plan.push_back(start);
-  for (int i = 0; i < 20; i++)
-  {
-    geometry_msgs::PoseStamped new_goal = goal;
-    new_goal.pose.position.x = start.pose.position.x + (0.5 * i);
-    new_goal.pose.position.y = start.pose.position.y + (0.5 * i);
+  // for (int i = 0; i < 20; i++)
+  // {
+  //   geometry_msgs::PoseStamped new_goal = goal;
+  //   new_goal.pose.position.x = start.pose.position.x + (0.5 * i);
+  //   new_goal.pose.position.y = start.pose.position.y + (0.5 * i);
 
-    plan.push_back(new_goal);
-  }
+  //   plan.push_back(new_goal);
+  // }
   // plan.push_back(goal);
-  // ======== line ========
 
+  /**********
+   * Circle *
+   **********/
+  double x = start.pose.position.x;
+  double y = start.pose.position.y;
+
+  double x_c = 0.0;
+  double y_c = 0.0;
+  double r = 3.0;
+
+  std::vector<geometry_msgs::PoseStamped> path;
+  int path_size = 100;
+  path.reserve(path_size);
+
+  std::vector<geometry_msgs::PoseStamped>::iterator min_iter;
+  double min_dis = 1000.0;
+
+  for (int i = 0; i < path_size; i++)
+  {
+    double theta = (2.0 * M_PI * i) / path_size;
+    geometry_msgs::PoseStamped new_goal = goal;
+    double x_d = x_c + r * std::cos(theta);
+    double y_d = y_c + r * std::sin(theta);
+
+    new_goal.pose.position.x = x_d;
+    new_goal.pose.position.y = y_d;
+
+    path.push_back(new_goal);
+
+    double dis = std::hypot(x_d - x, y_d - y);
+    if (dis < min_dis)
+    {
+      min_iter = path.end() - 1;
+      min_dis = dis;
+    }
+  }
+
+  plan.assign(min_iter, path.end());
+  plan.insert(plan.end(), path.begin(), min_iter);
+
+  // publish plan for visualization in rviz
   publishPlan(plan);
 
   return true;
