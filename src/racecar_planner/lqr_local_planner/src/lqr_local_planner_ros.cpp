@@ -41,7 +41,6 @@ LqrLocalPlannerROS::~LqrLocalPlannerROS()
 void LqrLocalPlannerROS::initialize(std::string name, tf2_ros::Buffer* tf, costmap_2d::Costmap2DROS* costmap_ros)
 {
   // ROS_WARN("LqrLocalPlannerROS::initialize");
-  Eigen::Matrix2d m;
   if (!initialized_)
   {
     tf_ = tf;
@@ -64,36 +63,38 @@ void LqrLocalPlannerROS::initialize(std::string name, tf2_ros::Buffer* tf, costm
     nh.param("min_w", min_w_, 0.0);
     nh.param("max_w_inc", max_w_inc_, 1.0);
 
-    nh.param("k_v_p", k_v_p_, 1.00);
-    nh.param("k_v_i", k_v_i_, 0.01);
-    nh.param("k_v_d", k_v_d_, 0.10);
+    nh.param("wheelbase", wheelbase_, 0.5);
 
-    nh.param("k_w_p", k_w_p_, 1.00);
-    nh.param("k_w_i", k_w_i_, 0.01);
-    nh.param("k_w_d", k_w_d_, 0.10);
+    // nh.param("k_v_p", k_v_p_, 1.00);
+    // nh.param("k_v_i", k_v_i_, 0.01);
+    // nh.param("k_v_d", k_v_d_, 0.10);
 
-    nh.param("k_theta", k_theta_, 0.5);
+    // nh.param("k_w_p", k_w_p_, 1.00);
+    // nh.param("k_w_i", k_w_i_, 0.01);
+    // nh.param("k_w_d", k_w_d_, 0.10);
 
-    e_v_ = i_v_ = 0.0;
-    e_w_ = i_w_ = 0.0;
+    // nh.param("k_theta", k_theta_, 0.5);
 
-    odom_helper_ = new base_local_planner::OdometryHelperRos("/odom");
-    target_pose_pub_ = nh.advertise<geometry_msgs::PoseStamped>("/target_pose", 10);
-    current_pose_pub_ = nh.advertise<geometry_msgs::PoseStamped>("/current_pose", 10);
+    // e_v_ = i_v_ = 0.0;
+    // e_w_ = i_w_ = 0.0;
 
-    base_frame_ = "base_link";
-    plan_index_ = 0;
-    x_ = y_ = theta_ = 0.0;
+    // odom_helper_ = new base_local_planner::OdometryHelperRos("/odom");
+    // target_pose_pub_ = nh.advertise<geometry_msgs::PoseStamped>("/target_pose", 10);
+    // current_pose_pub_ = nh.advertise<geometry_msgs::PoseStamped>("/current_pose", 10);
+
+    // base_frame_ = "base_link";
+    // plan_index_ = 0;
+    // x_ = y_ = theta_ = 0.0;
 
     double controller_freqency;
     nh.param("/move_base/controller_frequency", controller_freqency, 10.0);
     d_t_ = 1 / controller_freqency;
 
-    ROS_INFO("PID planner initialized!");
+    ROS_INFO("LQR planner initialized!");
   }
   else
   {
-    ROS_WARN("PID planner has already been initialized.");
+    ROS_WARN("LQR planner has already been initialized.");
   }
 }
 
@@ -134,13 +135,13 @@ bool LqrLocalPlannerROS::computeVelocityCommands(geometry_msgs::Twist& cmd_vel)
   // ROS_WARN("LqrLocalPlannerROS::computeVelocityCommands");
   if (!initialized_)
   {
-    ROS_ERROR("PID planner has not been initialized");
+    ROS_ERROR("LQR planner has not been initialized");
     return false;
   }
 
   if (goal_reached_)
   {
-    ROS_ERROR("PID planner goal reached without motion.");
+    ROS_ERROR("LQR planner goal reached without motion.");
     return true;
   }
 
@@ -237,8 +238,8 @@ bool LqrLocalPlannerROS::computeVelocityCommands(geometry_msgs::Twist& cmd_vel)
   // posistion not reached
   else
   {
-    cmd_vel.linear.x = LinearPIDController(base_odom, b_x_d, b_y_d);
-    cmd_vel.angular.z = AngularPIDController(base_odom, theta_d, theta_);
+    // cmd_vel.linear.x = LinearPIDController(base_odom, b_x_d, b_y_d);
+    // cmd_vel.angular.z = AngularPIDController(base_odom, theta_d, theta_);
   }
 
   ROS_INFO("velocity = %.2f m/s, omega = %.2f rad/s", cmd_vel.linear.x, cmd_vel.angular.z);
@@ -257,13 +258,13 @@ bool LqrLocalPlannerROS::computeVelocityCommands(geometry_msgs::Twist& cmd_vel)
 }
 
 /**
- * @brief PID controller in linear
+ * @brief LQR controller in linear
  * @param base_odometry odometry of the robot, to get velocity
  * @param b_x_d         desired x in body frame
  * @param b_y_d         desired y in body frame
  * @return  linear velocity
  */
-double LqrLocalPlannerROS::LinearPIDController(nav_msgs::Odometry& base_odometry, double b_x_d, double b_y_d)
+double LqrLocalPlannerROS::LqrController(nav_msgs::Odometry& base_odometry, double b_x_d, double b_y_d)
 {
   double v = std::hypot(base_odometry.twist.twist.linear.x, base_odometry.twist.twist.linear.y);
   double v_d = std::hypot(b_x_d, b_y_d) / d_t_;
@@ -293,43 +294,43 @@ double LqrLocalPlannerROS::LinearPIDController(nav_msgs::Odometry& base_odometry
 }
 
 /**
- * @brief PID controller in angular
+ * @brief LQR controller in angular
  * @param base_odometry odometry of the robot, to get velocity
  * @param theta_d       desired theta
  * @param theta         current theta
  * @return  angular velocity
  */
-double LqrLocalPlannerROS::AngularPIDController(nav_msgs::Odometry& base_odometry, double theta_d, double theta)
-{
-  double e_theta = theta_d - theta;
-  regularizeAngle(e_theta);
+// double LqrLocalPlannerROS::AngularPIDController(nav_msgs::Odometry& base_odometry, double theta_d, double theta)
+// {
+//   double e_theta = theta_d - theta;
+//   regularizeAngle(e_theta);
 
-  double w_d = e_theta / d_t_;
-  if (std::fabs(w_d) > max_w_)
-    w_d = std::copysign(max_w_, w_d);
-  // ROS_WARN("w_d: %.2f", w_d);
+//   double w_d = e_theta / d_t_;
+//   if (std::fabs(w_d) > max_w_)
+//     w_d = std::copysign(max_w_, w_d);
+//   // ROS_WARN("w_d: %.2f", w_d);
 
-  double w = base_odometry.twist.twist.angular.z;
-  double e_w = w_d - w;
-  i_w_ += e_w * d_t_;
-  double d_w = (e_w - e_w_) / d_t_;
-  e_w_ = e_w;
+//   double w = base_odometry.twist.twist.angular.z;
+//   double e_w = w_d - w;
+//   i_w_ += e_w * d_t_;
+//   double d_w = (e_w - e_w_) / d_t_;
+//   e_w_ = e_w;
 
-  double w_inc = k_w_p_ * e_w + k_w_i_ * i_w_ + k_w_d_ * d_w;
+//   double w_inc = k_w_p_ * e_w + k_w_i_ * i_w_ + k_w_d_ * d_w;
 
-  if (std::fabs(w_inc) > max_w_inc_)
-    w_inc = std::copysign(max_w_inc_, w_inc);
+//   if (std::fabs(w_inc) > max_w_inc_)
+//     w_inc = std::copysign(max_w_inc_, w_inc);
 
-  double w_cmd = w + w_inc;
-  if (std::fabs(w_cmd) > max_w_)
-    w_cmd = std::copysign(max_w_, w_cmd);
-  else if (std::fabs(w_cmd) < min_w_)
-    w_cmd = std::copysign(min_w_, w_cmd);
+//   double w_cmd = w + w_inc;
+//   if (std::fabs(w_cmd) > max_w_)
+//     w_cmd = std::copysign(max_w_, w_cmd);
+//   else if (std::fabs(w_cmd) < min_w_)
+//     w_cmd = std::copysign(min_w_, w_cmd);
 
-  // ROS_INFO("w_d: %.2lf, e_w: %.2lf, i_w: %.2lf, d_w: %.2lf, w_cmd: %.2lf", w_d, e_w, i_w_, d_w, w_cmd);
+//   // ROS_INFO("w_d: %.2lf, e_w: %.2lf, i_w: %.2lf, d_w: %.2lf, w_cmd: %.2lf", w_d, e_w, i_w_, d_w, w_cmd);
 
-  return w_cmd;
-}
+//   return w_cmd;
+// }
 
 /**
  * @brief  Check if the goal pose has been achieved
@@ -414,4 +415,4 @@ void LqrLocalPlannerROS::regularizeAngle(double& angle)
   while (angle <= -M_PI)
     angle += 2 * M_PI;
 }
-}  // namespace pid_local_planner
+}  // namespace lqr_local_planner

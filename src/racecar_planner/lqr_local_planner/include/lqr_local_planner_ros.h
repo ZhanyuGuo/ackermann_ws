@@ -69,7 +69,7 @@ public:
    * @param b_y_d         desired y in body frame
    * @return  linear velocity
    */
-  double LinearPIDController(nav_msgs::Odometry& base_odometry, double b_x_d, double b_y_d);
+  double LqrController(nav_msgs::Odometry& base_odometry, double b_x_d, double b_y_d);
 
   /**
    * @brief LQR controller in angular
@@ -78,7 +78,7 @@ public:
    * @param theta         current theta
    * @return  angular velocity
    */
-  double AngularPIDController(nav_msgs::Odometry& base_odometry, double theta_d, double theta);
+  // double AngularPIDController(nav_msgs::Odometry& base_odometry, double theta_d, double theta);
 
   /**
    * @brief  Check if the goal pose has been achieved
@@ -160,6 +160,9 @@ private:
   std::string base_frame_;
   base_local_planner::OdometryHelperRos* odom_helper_;
   ros::Publisher target_pose_pub_, current_pose_pub_;
+
+  // double v_cmd_, w_cmd_;
+  double wheelbase_;
 };
 };  // namespace lqr_local_planner
 
