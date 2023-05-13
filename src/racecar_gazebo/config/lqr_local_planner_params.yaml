@@ -18,5 +18,5 @@ LqrLocalPlannerROS:
   max_w_inc: 1.0
 
   # lqr
-  wheelbase: 0.5
+  wheelbase: 0.335
   max_iter: 100

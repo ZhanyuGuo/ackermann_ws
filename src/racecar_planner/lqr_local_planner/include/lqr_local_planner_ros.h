@@ -71,9 +71,10 @@ public:
    * @param theta_d desired theta
    * @param v_d desired velocity
    * @param w_d desired steering angle
-   * @return steering angle command
+   * @param v_cmd velocity command result
+   * @param w_cmd steering angle command result
    */
-  double LqrController(double x_d, double y_d, double theta_d, double v_d, double w_d);
+  void LqrController(double x_d, double y_d, double theta_d, double v_d, double w_d, double& v_cmd, double& w_cmd);
 
   /**
    * @brief LQR controller in angular

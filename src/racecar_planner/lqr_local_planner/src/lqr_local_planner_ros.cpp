@@ -186,11 +186,14 @@ bool LqrLocalPlannerROS::computeVelocityCommands(geometry_msgs::Twist& cmd_vel)
   }
   else
   {
-    cmd_vel.linear.x = v_d;
-    cmd_vel.angular.z = LqrController(x_d, y_d, theta_d, v_d, w_d);
+    double v_cmd, w_cmd;
+    LqrController(x_d, y_d, theta_d, v_d, w_d, v_cmd, w_cmd);
+
+    cmd_vel.linear.x = v_cmd;
+    cmd_vel.angular.z = w_cmd;
   }
 
-  // ROS_INFO("velocity = %.2f m/s, omega = %.2f rad/s", cmd_vel.linear.x, cmd_vel.angular.z);
+  ROS_INFO("velocity = %.2f m/s, omega = %.2f rad/s", cmd_vel.linear.x, cmd_vel.angular.z);
 
   // publish next target_ps_ pose
   target_ps_.header.frame_id = "map";
@@ -232,49 +235,61 @@ double LqrLocalPlannerROS::calcCurature()
  * @param theta_d desired theta
  * @param v_d desired velocity
  * @param w_d desired steering angle
- * @return steering angle command
+ * @param v_cmd velocity command result
+ * @param w_cmd steering angle command result
  */
-double LqrLocalPlannerROS::LqrController(double x_d, double y_d, double theta_d, double v_d, double w_d)
+void LqrLocalPlannerROS::LqrController(double x_d, double y_d, double theta_d, double v_d, double w_d, double& v_cmd,
+                                       double& w_cmd)
 {
-  Eigen::MatrixXd Q = Eigen::MatrixXd::Identity(3, 3);
-  Eigen::MatrixXd R = Eigen::MatrixXd::Identity(1, 1);
+  using namespace Eigen;
 
-  Eigen::Vector3d p_d(x_d, y_d, theta_d);
-  Eigen::Vector2d u_d(v_d, w_d);
-  Eigen::Vector3d e_p = Eigen::Vector3d(x_, y_, theta_) - p_d;
+  MatrixXd Q = MatrixXd::Identity(3, 3);
+  MatrixXd R = MatrixXd::Identity(2, 2);
+
+  Vector3d p_d(x_d, y_d, theta_d);
+  Vector2d u_d(v_d, w_d);
+  Vector3d e_p = Vector3d(x_, y_, theta_) - p_d;
   regularizeAngle(e_p(2));
 
-  Eigen::MatrixXd A = Eigen::MatrixXd::Zero(3, 3);
+  MatrixXd A = MatrixXd::Zero(3, 3);
   A(0, 0) = 1.0;
   A(0, 2) = -d_t_ * u_d[0] * std::sin(theta_d);
   A(1, 1) = 1.0;
   A(1, 2) = d_t_ * u_d[0] * std::cos(theta_d);
   A(2, 2) = 1.0;
 
-  Eigen::MatrixXd B = Eigen::MatrixXd::Zero(3, 1);
-  B(2, 0) = u_d[0] * d_t_ / wheelbase_ / std::pow(std::cos(w_d), 2);
+  MatrixXd B = MatrixXd::Zero(3, 2);
+  B(0, 0) = d_t_ * std::cos(theta_d);
+  B(1, 0) = d_t_ * std::sin(theta_d);
+  B(2, 0) = d_t_ * std::tan(w_d) / wheelbase_;
+  B(2, 1) = u_d[0] * d_t_ / (wheelbase_ * std::pow(std::cos(w_d), 2));
 
   double eps = 0.01;
-  double diff = std::numeric_limits<double>::max();
 
-  Eigen::MatrixXd P = Q;
-  Eigen::MatrixXd AT = A.transpose();
-  Eigen::MatrixXd BT = B.transpose();
+  MatrixXd P = MatrixXd::Zero(3, 3);
+  MatrixXd AT = A.transpose();
+  MatrixXd BT = B.transpose();
 
   int num_iter = 0;
-  while (num_iter++ < max_iter_ && diff > eps)
+  while (num_iter++ < max_iter_)
   {
-    Eigen::MatrixXd Pn = AT * P * A - AT * P * B * (R + BT * P * B).inverse() * BT * P * A + Q;
-    diff = ((Pn - P).array().abs()).maxCoeff();
+    MatrixXd Pn = AT * P * A - (AT * P * B) * (R + BT * P * B).inverse() * (BT * P * A) + Q;
+    if (((Pn - P).array().abs()).maxCoeff() < eps)
+      break;
     P = Pn;
   }
-  // ROS_WARN("num_iter: %d, diff: %.2f", num_iter, diff);
+  // ROS_WARN("num_iter: %d", num_iter);
 
-  Eigen::MatrixXd feed_back = -((R + BT * P * B).inverse() * BT * P * A) * e_p;
-  double w_cmd = feed_back(0, 0) + w_d;
+  MatrixXd feed_back = -((R + BT * P * B).inverse() * BT * P * A) * e_p;
+
+  v_cmd = feed_back(0, 0) + v_d;
+  w_cmd = feed_back(1, 0) + w_d;
+
   regularizeAngle(w_cmd);
-
-  return w_cmd;
+  if (std::abs(v_cmd) > max_v_)
+    v_cmd = std::copysign(max_v_, v_cmd);
+  if (std::abs(w_cmd) > max_w_)
+    w_cmd = std::copysign(max_w_, w_cmd);
 }
 
 /**
