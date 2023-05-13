@@ -1,7 +1,7 @@
 function [dU, LatError] = MPCController(idx, XRef, URef, X, dUmin, dUmax, ...
-    ddUmin, ddUmax, L, Xnum, Unum, Prestep, Constep, Row, Q, R, dt)
-%***************LQR控制器******************%
-%%输入参数：
+        ddUmin, ddUmax, L, Xnum, Unum, Prestep, Constep, Row, Q, R, dt)
+    %***************LQR控制器******************%
+    %%输入参数：
     %idx：最近目标轨迹点索引
     %XRef：目标轨迹
     %URef：目标控制量
@@ -17,7 +17,7 @@ function [dU, LatError] = MPCController(idx, XRef, URef, X, dUmin, dUmax, ...
     %Q：半正定状态加权矩阵
     %R：正定控制加权矩阵
     %dt：迭代时间步长
-%%输出参数：
+    %%输出参数：
     %dU：控制增量矩阵[速度（m/s）, 前轮转角（rad）]
     %LatError：横向跟踪误差
     XR = XRef(idx, :);
@@ -32,8 +32,8 @@ function [dU, LatError] = MPCController(idx, XRef, URef, X, dUmin, dUmax, ...
          0, 0, 1];
 
     %原始控制矩阵
-    b = [dt * cos(XR(3)),       0;
-         dt * sin(XR(3)),       0;
+    b = [dt * cos(XR(3)), 0;
+         dt * sin(XR(3)), 0;
          dt * tan(UR(2)) / L, UR(1) * dt / (L * cos(UR(2)) ^ 2)];
 
     %%MPC状态空间信息
@@ -60,22 +60,30 @@ function [dU, LatError] = MPCController(idx, XRef, URef, X, dUmin, dUmax, ...
     %%MPC预测矩阵信息
     %PHI矩阵
     PHI_cell = cell(Prestep, 1);
-    for i = 1 : Prestep
+
+    for i = 1:Prestep
         PHI_cell{i, 1} = C * A ^ i;
     end
+
     PHI = cell2mat(PHI_cell);
 
     %THETA矩阵
     THETA_cell = cell(Prestep, Constep);
-    for i = 1 : Prestep
-        for j = 1 : Constep
+
+    for i = 1:Prestep
+
+        for j = 1:Constep
+
             if j <= i
                 THETA_cell{i, j} = C * A ^ (i - j) * B;
             else
                 THETA_cell{i, j} = zeros(Xnum, Unum);
             end
+
         end
+
     end
+
     THETA = cell2mat(THETA_cell);
 
     %%二次型目标函数矩阵信息
@@ -99,9 +107,11 @@ function [dU, LatError] = MPCController(idx, XRef, URef, X, dUmin, dUmax, ...
     %%不等式约束矩阵信息
     %AI矩阵
     At = zeros(Constep, Constep);
-    for i = 1 : Constep
-        At(i, 1 : i) = 1;
+
+    for i = 1:Constep
+        At(i, 1:i) = 1;
     end
+
     AI = kron(At, eye(Unum));
 
     %dUt矩阵
@@ -115,12 +125,12 @@ function [dU, LatError] = MPCController(idx, XRef, URef, X, dUmin, dUmax, ...
 
     %%不等式约束求解矩阵信息（Ax <= b)
     %矩阵A
-    Acons_cell = {  AI, zeros(Unum * Constep, 1);
+    Acons_cell = {AI, zeros(Unum * Constep, 1);
                   - AI, zeros(Unum * Constep, 1)};
     Acons = cell2mat(Acons_cell);
 
     %向量b
-    bcons_cell = {  dUMAX - dUt;
+    bcons_cell = {dUMAX - dUt;
                   - dUMIN + dUt};
     bcons = cell2mat(bcons_cell);
 
@@ -130,7 +140,7 @@ function [dU, LatError] = MPCController(idx, XRef, URef, X, dUmin, dUmax, ...
 
     %%求解
     options = optimoptions('quadprog', 'Display', 'iter', 'MaxIterations', 100, 'TolFun', 1e-16);
-    DU = quadprog(H, g, Acons, bcons, [ ], [ ], lb, ub, [ ], options);
+    DU = quadprog(H, g, Acons, bcons, [], [], lb, ub, [], options);
 
     %%计算输出
     dU(1) = DU(1);
