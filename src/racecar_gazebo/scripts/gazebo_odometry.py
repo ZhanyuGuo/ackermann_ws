@@ -27,7 +27,7 @@ class OdometryNode:
         self.last_recieved_stamp = None
 
         # Set the update rate
-        rospy.Timer(rospy.Duration(0.05), self.timer_callback)  # 20hz
+        rospy.Timer(rospy.Duration(0.05), self.timer_callback)
 
         self.tf_pub = tf2_ros.TransformBroadcaster()
 
@@ -56,8 +56,8 @@ class OdometryNode:
 
         cmd = Odometry()
         cmd.header.stamp = self.last_recieved_stamp
-        cmd.header.frame_id = "odom"  #  map -> odom
-        cmd.child_frame_id = "base_link"  # odom -> base_link
+        cmd.header.frame_id = "odom"
+        cmd.child_frame_id = "base_link"
         cmd.pose.pose = self.last_received_pose
         cmd.twist.twist = self.last_received_twist
         self.pub_odom.publish(cmd)
@@ -72,14 +72,14 @@ class OdometryNode:
         if self.publish_tf_map:
             cmd = Odometry()
             cmd.header.stamp = self.last_recieved_stamp
-            cmd.header.frame_id = "map"  #  map -> odom
-            cmd.child_frame_id = "odom"  # odom -> base_link
+            cmd.header.frame_id = "map"
+            cmd.child_frame_id = "odom"
             cmd.pose.pose.orientation.w = 1
             # 0 transform from map to odom
             tf = TransformStamped(
                 header=Header(frame_id=cmd.header.frame_id, stamp=cmd.header.stamp),
                 child_frame_id=cmd.child_frame_id,
-                transform=Transform(translation=cmd.pose.pose.position, rotation=cmd.pose.pose.orientation)
+                transform=Transform(translation=cmd.pose.pose.position, rotation=cmd.pose.pose.orientation),
             )
             self.tf_pub.sendTransform(tf)
 
@@ -87,5 +87,7 @@ class OdometryNode:
 # Start the node
 if __name__ == "__main__":
     rospy.init_node("gazebo_odometry_node")
+
     node = OdometryNode()
+
     rospy.spin()

@@ -67,12 +67,6 @@ def keydown(e):
         control = sum(state) > 0
 
 
-# Up -> linear.x = 1.0
-# Down -> linear.x = -1.0
-# Left ->  angular.z = 1.0
-# Right -> angular.z = -1.0
-
-
 def publish_cb(_):
     with state_lock:
         if not control:
@@ -136,4 +130,5 @@ if __name__ == "__main__":
     rospy.init_node("keyboard_teleop", disable_signals=True)
 
     signal.signal(signal.SIGINT, lambda s, f: shutdown())
+
     main()

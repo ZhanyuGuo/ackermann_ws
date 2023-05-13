@@ -5,7 +5,7 @@ kp = 10;
 ki = 0.1;
 kd = 30;
 
-X0 = [0, 0, 0]; %小车初始位姿[坐标x（m), 坐标y（m）, 航向（rad）]
+X0 = [1, 0, 0]; %小车初始位姿[坐标x（m), 坐标y（m）, 航向（rad）]
 Con0 = [0, 0];
 XRefCir_x = 20;
 XRefCir_y = 0;
@@ -57,18 +57,18 @@ set(gcf, 'unit', 'normalized', 'position', [0.1, 0.3, 0.8, 0.32]);
 di = 5;
 
 for i = 1:di:size(XCirplot, 1) - di
-    %     hold on
-    %     plot(XCirplot(i,1), XCirplot(i,2), 'or');
-    %     hold on
-    %     plot(XCirplot(i:i+1,1),XCirplot(i:i+1,2), '-r', 'LineWidth', 1.5)
-    %     hold on
+    % hold on
+    % plot(XCirplot(i, 1), XCirplot(i, 2), 'or');
+    % hold on
+    % plot(XCirplot(i:i + 1, 1), XCirplot(i:i + 1, 2), '-r', 'LineWidth', 1.5)
+    % hold on
     subplot(1, 3, 1);
     plot(XRefCir(:, 1), XRefCir(:, 2), '--b', 'LineWidth', 1)
     hold off
     plot(XCirplot(i + di, 1), XCirplot(i + di, 2), 'or');
 
     hold on
-    %     plot(XCirplot(i:i+1,1),XCirplot(i:i+1,2), '-r', 'LineWidth', 1.5)
+    plot(XCirplot(i:i + 1, 1), XCirplot(i:i + 1, 2), '-r', 'LineWidth', 1.5)
     plot(XRefCir(:, 1), XRefCir(:, 2), '--b', 'LineWidth', 1)
     axis equal
     xlabel('纵向坐标（m）');
