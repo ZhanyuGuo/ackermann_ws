@@ -52,7 +52,7 @@ void PidLocalPlannerROS::initialize(std::string name, tf2_ros::Buffer* tf, costm
     nh.param("p_window", p_window_, 0.5);
     nh.param("o_window", o_window_, 1.0);
 
-    nh.param("p_precision", p_precision_, 0.2);
+    nh.param("p_precision", p_precision_, 0.1);
     nh.param("o_precision", o_precision_, 0.5);
 
     nh.param("max_v", max_v_, 1.0);
@@ -73,8 +73,13 @@ void PidLocalPlannerROS::initialize(std::string name, tf2_ros::Buffer* tf, costm
 
     nh.param("k_theta", k_theta_, 0.5);
 
+    nh.param("k_p", k_p_, 1.00);
+    nh.param("k_i", k_i_, 0.01);
+    nh.param("k_d", k_d_, 0.10);
+
     e_v_ = i_v_ = 0.0;
     e_w_ = i_w_ = 0.0;
+    e_ = i_ = 0.0;
 
     odom_helper_ = new base_local_planner::OdometryHelperRos("/odom");
     target_pose_pub_ = nh.advertise<geometry_msgs::PoseStamped>("/target_pose", 10);
@@ -236,8 +241,17 @@ bool PidLocalPlannerROS::computeVelocityCommands(geometry_msgs::Twist& cmd_vel)
   // posistion not reached
   else
   {
-    cmd_vel.linear.x = LinearPIDController(base_odom, b_x_d, b_y_d);
-    cmd_vel.angular.z = AngularPIDController(base_odom, theta_d, theta_);
+    /****************
+     * original PID *
+     ****************/
+    // cmd_vel.linear.x = LinearPIDController(base_odom, b_x_d, b_y_d);
+    // cmd_vel.angular.z = AngularPIDController(base_odom, theta_d, theta_);
+
+    /***********************
+     * only steering angle *
+     ***********************/
+    cmd_vel.linear.x = max_v_;
+    cmd_vel.angular.z = AngleController(b_x_d, b_y_d, theta_d, theta_);
   }
 
   ROS_INFO("velocity = %.2f m/s, omega = %.2f rad/s", cmd_vel.linear.x, cmd_vel.angular.z);
@@ -331,6 +345,29 @@ double PidLocalPlannerROS::AngularPIDController(nav_msgs::Odometry& base_odometr
 }
 
 /**
+ * @brief PID only control steering angle
+ * @param b_x_d desired x in body frame
+ * @param b_y_d desired y in body frame
+ * @param theta_d desired theta
+ * @param theta current theta
+ * @return angular velocity
+ */
+double PidLocalPlannerROS::AngleController(double b_x_d, double b_y_d, double theta_d, double theta)
+{
+  double e = std::sin(theta_d - theta) * std::hypot(b_x_d, b_y_d);
+  i_ += e * d_t_;
+  double d = (e - e_) / d_t_;
+  double w_cmd = std::atan(k_p_ * e + k_i_ * i_ + k_d_ * d);
+  e_ = e;
+  if (std::fabs(w_cmd) > max_w_)
+    w_cmd = std::copysign(max_w_, w_cmd);
+  else if (std::fabs(w_cmd) < min_w_)
+    w_cmd = std::copysign(min_w_, w_cmd);
+
+  return w_cmd;
+}
+
+/**
  * @brief  Check if the goal pose has been achieved
  *
  * @return True if achieved, false otherwise
@@ -354,6 +391,7 @@ bool PidLocalPlannerROS::isGoalReached()
     ROS_INFO("Goal reached");
     e_v_ = i_v_ = 0.0;
     e_w_ = i_w_ = 0.0;
+    e_ = i_ = 0.0;
     return true;
   }
 
@@ -366,6 +404,7 @@ bool PidLocalPlannerROS::isGoalReached()
       robotStops();
       e_v_ = i_v_ = 0.0;
       e_w_ = i_w_ = 0.0;
+      e_ = i_ = 0.0;
       ROS_INFO("Goal reached");
     }
   }

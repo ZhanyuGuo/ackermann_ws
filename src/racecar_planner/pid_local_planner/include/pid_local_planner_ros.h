@@ -80,6 +80,16 @@ public:
   double AngularPIDController(nav_msgs::Odometry& base_odometry, double theta_d, double theta);
 
   /**
+   * @brief PID only control steering angle
+   * @param b_x_d desired x in body frame
+   * @param b_y_d desired y in body frame
+   * @param theta_d desired theta
+   * @param theta current theta
+   * @return angular velocity
+   */
+  double AngleController(double b_x_d, double b_y_d, double theta_d, double theta);
+
+  /**
    * @brief  Check if the goal pose has been achieved
    *
    * @return True if achieved, false otherwise
@@ -148,12 +158,13 @@ private:
   double p_window_, o_window_;        // next point distance/turning angle
   double p_precision_, o_precision_;  // goal reached tolerance
   double d_t_;
-  double e_v_, e_w_;
-  double i_v_, i_w_;
+  double e_v_, e_w_, e_;
+  double i_v_, i_w_, i_;
   double max_v_, min_v_, max_v_inc_;  // linear velocity
   double max_w_, min_w_, max_w_inc_;  // angular velocity
   double k_v_p_, k_v_i_, k_v_d_;      // pid controller params
   double k_w_p_, k_w_i_, k_w_d_;      // pid controller params
+  double k_p_, k_i_, k_d_;      // pid controller params
   double k_theta_;                    // pid controller params
 
   std::string base_frame_;

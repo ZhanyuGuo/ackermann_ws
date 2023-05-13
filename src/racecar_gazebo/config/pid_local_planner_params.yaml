@@ -4,7 +4,7 @@ PidLocalPlannerROS:
   o_window: 1.0
 
   # goal reached tolerance
-  p_precision: 0.2
+  p_precision: 0.1
   o_precision: 0.5
 
   # linear velocity
@@ -26,6 +26,6 @@ PidLocalPlannerROS:
   k_w_i: 0.01
   k_w_d: 0.10
 
-  k_theta: 0.5
+  k_theta: 1.0 # 0.5
 
   step: 1
