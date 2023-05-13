@@ -50,10 +50,10 @@ void LqrLocalPlannerROS::initialize(std::string name, tf2_ros::Buffer* tf, costm
     ros::NodeHandle nh = ros::NodeHandle("~/" + name);
 
     nh.param("p_window", p_window_, 0.5);
-    nh.param("o_window", o_window_, 1.0);
+    // nh.param("o_window", o_window_, 1.0);
 
     nh.param("p_precision", p_precision_, 0.2);
-    nh.param("o_precision", o_precision_, 0.5);
+    // nh.param("o_precision", o_precision_, 0.5);
 
     nh.param("max_v", max_v_, 1.0);
     nh.param("min_v", min_v_, 0.0);
@@ -64,6 +64,7 @@ void LqrLocalPlannerROS::initialize(std::string name, tf2_ros::Buffer* tf, costm
     nh.param("max_w_inc", max_w_inc_, 1.0);
 
     nh.param("wheelbase", wheelbase_, 0.5);
+    nh.param("max_iter", max_iter_, 100);
 
     // nh.param("k_v_p", k_v_p_, 1.00);
     // nh.param("k_v_i", k_v_i_, 0.01);
@@ -79,12 +80,12 @@ void LqrLocalPlannerROS::initialize(std::string name, tf2_ros::Buffer* tf, costm
     // e_w_ = i_w_ = 0.0;
 
     // odom_helper_ = new base_local_planner::OdometryHelperRos("/odom");
-    // target_pose_pub_ = nh.advertise<geometry_msgs::PoseStamped>("/target_pose", 10);
-    // current_pose_pub_ = nh.advertise<geometry_msgs::PoseStamped>("/current_pose", 10);
+    target_pose_pub_ = nh.advertise<geometry_msgs::PoseStamped>("/target_pose", 10);
+    current_pose_pub_ = nh.advertise<geometry_msgs::PoseStamped>("/current_pose", 10);
 
     // base_frame_ = "base_link";
-    // plan_index_ = 0;
-    // x_ = y_ = theta_ = 0.0;
+    plan_index_ = 1;  // NOTE: start from 1 to calculate curvature
+    x_ = y_ = theta_ = 0.0;
 
     double controller_freqency;
     nh.param("/move_base/controller_frequency", controller_freqency, 10.0);
@@ -118,7 +119,7 @@ bool LqrLocalPlannerROS::setPlan(const std::vector<geometry_msgs::PoseStamped>& 
   global_plan_ = orig_global_plan;
 
   // reset plan parameters
-  plan_index_ = 0;  // NOTE: ~~set to 3 to avoid getting wrong closest point on the path~~
+  plan_index_ = 1;  // NOTE: start from 1 to calculate curvature
   goal_reached_ = false;
 
   return true;
@@ -150,106 +151,53 @@ bool LqrLocalPlannerROS::computeVelocityCommands(geometry_msgs::Twist& cmd_vel)
   x_ = current_ps_.pose.position.x;
   y_ = current_ps_.pose.position.y;
   theta_ = tf2::getYaw(current_ps_.pose.orientation);  // [-pi, pi]
-  // ROS_WARN("theta_ %.2f", theta_);
+  // ROS_WARN("x = %.2f, y = %.2f, theta = %.2f", x_, y_, theta_);
 
-  double theta_d, theta_dir, theta_trj;
-  double b_x_d, b_y_d;  // desired x, y in base frame
-  double e_theta;
-
-  while (plan_index_ < global_plan_.size())
+  double x_d, y_d, theta_d;
+  while (plan_index_ < global_plan_.size() - 1)
   {
     target_ps_ = global_plan_[plan_index_];
-    double x_d = target_ps_.pose.position.x;
-    double y_d = target_ps_.pose.position.y;
+    x_d = target_ps_.pose.position.x;
+    y_d = target_ps_.pose.position.y;
 
-    // from robot to plan point
-    theta_dir = atan2((y_d - y_), (x_d - x_));  // [-pi, pi]
-
-    int next_plan_index = plan_index_ + 1;
-    if (next_plan_index < global_plan_.size())
-      // theta on the trajectory
-      theta_trj = atan2((global_plan_[next_plan_index].pose.position.y - y_d),
-                        (global_plan_[next_plan_index].pose.position.x - x_d));
-
-    // if the difference is greater than PI, it will get a wrong result
-    if (std::fabs(theta_trj - theta_dir) > M_PI)
-    {
-      // add 2*PI to the smaller one
-      if (theta_trj > theta_dir)
-        theta_dir += 2 * M_PI;
-      else
-        theta_trj += 2 * M_PI;
-    }
-
-    // weighting between two angle
-    theta_d = (1 - k_theta_) * theta_trj + k_theta_ * theta_dir;
-    regularizeAngle(theta_d);
-
-    tf2::Quaternion q;
-    q.setRPY(0, 0, theta_d);
-    tf2::convert(q, target_ps_.pose.orientation);
-
-    // transform from map into base_frame
-    getTransformedPosition(target_ps_, b_x_d, b_y_d);
-
-    e_theta = theta_d - theta_;
-    regularizeAngle(e_theta);
-
-    if (std::hypot(b_x_d, b_y_d) > p_window_)  // || std::fabs(e_theta) > o_window_
+    if (std::hypot(x_d - x_, y_d - y_) > p_window_)
       break;
 
     plan_index_++;
   }
 
-  // odometry observation - getting robot velocities in robot frame
-  nav_msgs::Odometry base_odom;
-  odom_helper_->getOdom(base_odom);
+  theta_d = atan2((global_plan_[plan_index_ + 1].pose.position.y - y_d),
+                  (global_plan_[plan_index_ + 1].pose.position.x - x_d));
+  tf2::Quaternion q;
+  q.setRPY(0, 0, theta_d);
+  tf2::convert(q, target_ps_.pose.orientation);
 
-  // get final goal orientation - Quaternion to Euler
-  // final_rpy_ = getEulerAngles(global_plan_.back());
-  // ROS_WARN("final_rpy_[2] = %.2f", final_rpy_[2]);
+  double v_d = max_v_;
+  double kappa = calcCurature();
+  double w_d = std::atan2(kappa * wheelbase_, 1);
+  // ROS_WARN("kappa = %.2f, w_d = %.2f", kappa, w_d);
 
   // position reached
   if (getGoalPositionDistance(global_plan_.back(), x_, y_) < p_precision_)
   {
-    // double fe_theta = final_rpy_[2] - theta_;
-    // regularizeAngle(fe_theta);
-
-    // orientation reached
-    // if (std::fabs(fe_theta) < o_precision_)
-    // {
     cmd_vel.linear.x = 0.0;
     cmd_vel.angular.z = 0.0;
     goal_reached_ = true;
-    // }
-    // // orientation not reached
-    // else
-    // {
-    //   cmd_vel.linear.x = 0.0;
-    //   cmd_vel.angular.z = AngularPIDController(base_odom, final_rpy_[2], theta_);
-    // }
   }
-  // // large angle, turn first
-  // else if (std::fabs(e_theta) > M_PI_2)
-  // {
-  //   cmd_vel.linear.x = 0.0;
-  //   cmd_vel.angular.z = AngularPIDController(base_odom, theta_d, theta_);
-  // }
-  // posistion not reached
   else
   {
-    // cmd_vel.linear.x = LinearPIDController(base_odom, b_x_d, b_y_d);
-    // cmd_vel.angular.z = AngularPIDController(base_odom, theta_d, theta_);
+    cmd_vel.linear.x = v_d;
+    cmd_vel.angular.z = LqrController(x_d, y_d, theta_d, v_d, w_d);
   }
 
-  ROS_INFO("velocity = %.2f m/s, omega = %.2f rad/s", cmd_vel.linear.x, cmd_vel.angular.z);
+  // ROS_INFO("velocity = %.2f m/s, omega = %.2f rad/s", cmd_vel.linear.x, cmd_vel.angular.z);
 
   // publish next target_ps_ pose
   target_ps_.header.frame_id = "map";
   target_ps_.header.stamp = ros::Time::now();
   target_pose_pub_.publish(target_ps_);
 
-  // publish robot pose
+  // // publish robot pose
   current_ps_.header.frame_id = "map";
   current_ps_.header.stamp = ros::Time::now();
   current_pose_pub_.publish(current_ps_);
@@ -257,40 +205,80 @@ bool LqrLocalPlannerROS::computeVelocityCommands(geometry_msgs::Twist& cmd_vel)
   return true;
 }
 
+double LqrLocalPlannerROS::calcCurature()
+{
+  double ax = global_plan_[plan_index_ - 1].pose.position.x;
+  double ay = global_plan_[plan_index_ - 1].pose.position.y;
+  double bx = global_plan_[plan_index_].pose.position.x;
+  double by = global_plan_[plan_index_].pose.position.y;
+  double cx = global_plan_[plan_index_ + 1].pose.position.x;
+  double cy = global_plan_[plan_index_ + 1].pose.position.y;
+
+  double a = std::hypot(bx - cx, by - cy);
+  double b = std::hypot(cx - ax, cy - ay);
+  double c = std::hypot(ax - bx, ay - by);
+
+  double cosB = (a * a + c * c - b * b) / (2 * a * c);
+  double sinB = std::sin(std::acos(cosB));
+  double kappa = 2 * sinB / b;
+
+  return kappa;
+}
+
 /**
  * @brief LQR controller in linear
- * @param base_odometry odometry of the robot, to get velocity
- * @param b_x_d         desired x in body frame
- * @param b_y_d         desired y in body frame
- * @return  linear velocity
+ * @param x_d
+ * @param y_d
+ * @param theta_d
+ * @param v_d
+ * @param w_d
+ * @return double
  */
-double LqrLocalPlannerROS::LqrController(nav_msgs::Odometry& base_odometry, double b_x_d, double b_y_d)
+double LqrLocalPlannerROS::LqrController(double x_d, double y_d, double theta_d, double v_d, double w_d)
 {
-  double v = std::hypot(base_odometry.twist.twist.linear.x, base_odometry.twist.twist.linear.y);
-  double v_d = std::hypot(b_x_d, b_y_d) / d_t_;
-  if (std::fabs(v_d) > max_v_)
-    v_d = std::copysign(max_v_, v_d);
-  // ROS_WARN("v_d: %.2f", v_d);
+  // ROS_WARN("1");
+  Eigen::MatrixXd Q = Eigen::MatrixXd::Identity(3, 3);
+  Eigen::MatrixXd R = Eigen::MatrixXd::Identity(1, 1);
 
-  double e_v = v_d - v;
-  i_v_ += e_v * d_t_;
-  double d_v = (e_v - e_v_) / d_t_;
-  e_v_ = e_v;
+  Eigen::Vector3d p_d(x_d, y_d, theta_d);
+  Eigen::Vector2d u_d(v_d, w_d);
+  Eigen::Vector3d e_p = Eigen::Vector3d(x_, y_, theta_) - p_d;
+  regularizeAngle(e_p(2));
+  // ROS_WARN("2");
 
-  double v_inc = k_v_p_ * e_v + k_v_i_ * i_v_ + k_v_d_ * d_v;
+  Eigen::MatrixXd A = Eigen::MatrixXd::Zero(3, 3);
+  A(0, 0) = 1.0;
+  A(0, 2) = -d_t_ * u_d[0] * std::sin(theta_d);
+  A(1, 1) = 1.0;
+  A(1, 2) = d_t_ * u_d[0] * std::cos(theta_d);
+  A(2, 2) = 1.0;
+  // ROS_WARN("3");
 
-  if (std::fabs(v_inc) > max_v_inc_)
-    v_inc = std::copysign(max_v_inc_, v_inc);
+  Eigen::MatrixXd B = Eigen::MatrixXd::Zero(3, 1);
+  B(2, 0) = u_d[0] * d_t_ / wheelbase_ / std::pow(std::cos(w_d), 2);
+  // ROS_WARN("4");
 
-  double v_cmd = v + v_inc;
-  if (std::fabs(v_cmd) > max_v_)
-    v_cmd = std::copysign(max_v_, v_cmd);
-  else if (std::fabs(v_cmd) < min_v_)
-    v_cmd = std::copysign(min_v_, v_cmd);
+  double eps = 0.01;
+  double diff = std::numeric_limits<double>::max();
 
-  // ROS_INFO("v_d: %.2lf, e_v: %.2lf, i_v: %.2lf, d_v: %.2lf, v_cmd: %.2lf", v_d, e_v, i_v_, d_v, v_cmd);
+  Eigen::MatrixXd P = Q;
+  Eigen::MatrixXd AT = A.transpose();
+  Eigen::MatrixXd BT = B.transpose();
 
-  return v_cmd;
+  int num_iter = 0;
+  while (num_iter++ < max_iter_ && diff > eps)
+  {
+    Eigen::MatrixXd Pn = AT * P * A - AT * P * B * (R + BT * P * B).inverse() * BT * P * A + Q;
+    diff = ((Pn - P).array().abs()).maxCoeff();
+    P = Pn;
+  }
+  // ROS_WARN("num_iter: %d, diff: %.2f", num_iter, diff);
+
+  Eigen::MatrixXd feed_back = -((R + BT * P * B).inverse() * BT * P * A) * e_p;
+  double w_cmd = feed_back(0, 0) + w_d;
+  regularizeAngle(w_cmd);
+
+  return w_cmd;
 }
 
 /**

@@ -5,7 +5,7 @@
 #include <nav_core/base_local_planner.h>
 #include <base_local_planner/odometry_helper_ros.h>
 #include <tf2/utils.h>
-// #include <tf2/LinearMath/Matrix3x3.h>
+#include <tf2/LinearMath/Matrix3x3.h>
 #include <tf2_ros/buffer.h>
 #include <costmap_2d/costmap_2d_ros.h>
 #include <geometry_msgs/PoseStamped.h>
@@ -62,14 +62,18 @@ public:
    */
   bool computeVelocityCommands(geometry_msgs::Twist& cmd_vel);
 
+  double calcCurature();
+
   /**
    * @brief LQR controller in linear
-   * @param base_odometry odometry of the robot, to get velocity
-   * @param b_x_d         desired x in body frame
-   * @param b_y_d         desired y in body frame
-   * @return  linear velocity
+   * @param x_d
+   * @param y_d
+   * @param theta_d
+   * @param v_d
+   * @param w_d
+   * @return double
    */
-  double LqrController(nav_msgs::Odometry& base_odometry, double b_x_d, double b_y_d);
+  double LqrController(double x_d, double y_d, double theta_d, double v_d, double w_d);
 
   /**
    * @brief LQR controller in angular
@@ -163,6 +167,7 @@ private:
 
   // double v_cmd_, w_cmd_;
   double wheelbase_;
+  int max_iter_;
 };
 };  // namespace lqr_local_planner
 
