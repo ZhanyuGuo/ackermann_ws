@@ -66,12 +66,12 @@ public:
 
   /**
    * @brief LQR controller in linear
-   * @param x_d
-   * @param y_d
-   * @param theta_d
-   * @param v_d
-   * @param w_d
-   * @return double
+   * @param x_d desired x
+   * @param y_d desired y
+   * @param theta_d desired theta
+   * @param v_d desired velocity
+   * @param w_d desired steering angle
+   * @return steering angle command
    */
   double LqrController(double x_d, double y_d, double theta_d, double v_d, double w_d);
 
@@ -86,7 +86,6 @@ public:
 
   /**
    * @brief  Check if the goal pose has been achieved
-   *
    * @return True if achieved, false otherwise
    */
   bool isGoalReached();
@@ -129,16 +128,16 @@ private:
    * @param x     result x
    * @param y     result y
    */
-  void getTransformedPosition(geometry_msgs::PoseStamped& src, double& x, double& y)
-  {
-    geometry_msgs::PoseStamped dst;
+  // void getTransformedPosition(geometry_msgs::PoseStamped& src, double& x, double& y)
+  // {
+  //   geometry_msgs::PoseStamped dst;
 
-    src.header.stamp = ros::Time(0);
-    tf_->transform(src, dst, base_frame_);
+  //   src.header.stamp = ros::Time(0);
+  //   tf_->transform(src, dst, base_frame_);
 
-    x = dst.pose.position.x;
-    y = dst.pose.position.y;
-  }
+  //   x = dst.pose.position.x;
+  //   y = dst.pose.position.y;
+  // }
 
   costmap_2d::Costmap2DROS* costmap_ros_;
   tf2_ros::Buffer* tf_;
@@ -153,19 +152,18 @@ private:
   double p_window_, o_window_;        // next point distance/turning angle
   double p_precision_, o_precision_;  // goal reached tolerance
   double d_t_;
-  double e_v_, e_w_;
-  double i_v_, i_w_;
+  // double e_v_, e_w_;
+  // double i_v_, i_w_;
   double max_v_, min_v_, max_v_inc_;  // linear velocity
   double max_w_, min_w_, max_w_inc_;  // angular velocity
-  double k_v_p_, k_v_i_, k_v_d_;      // pid controller params
-  double k_w_p_, k_w_i_, k_w_d_;      // pid controller params
-  double k_theta_;                    // pid controller params
+  // double k_v_p_, k_v_i_, k_v_d_;      // pid controller params
+  // double k_w_p_, k_w_i_, k_w_d_;      // pid controller params
+  // double k_theta_;                    // pid controller params
 
-  std::string base_frame_;
-  base_local_planner::OdometryHelperRos* odom_helper_;
+  // std::string base_frame_;
+  // base_local_planner::OdometryHelperRos* odom_helper_;
   ros::Publisher target_pose_pub_, current_pose_pub_;
 
-  // double v_cmd_, w_cmd_;
   double wheelbase_;
   int max_iter_;
 };

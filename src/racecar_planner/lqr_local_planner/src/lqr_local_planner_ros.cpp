@@ -227,16 +227,15 @@ double LqrLocalPlannerROS::calcCurature()
 
 /**
  * @brief LQR controller in linear
- * @param x_d
- * @param y_d
- * @param theta_d
- * @param v_d
- * @param w_d
- * @return double
+ * @param x_d desired x
+ * @param y_d desired y
+ * @param theta_d desired theta
+ * @param v_d desired velocity
+ * @param w_d desired steering angle
+ * @return steering angle command
  */
 double LqrLocalPlannerROS::LqrController(double x_d, double y_d, double theta_d, double v_d, double w_d)
 {
-  // ROS_WARN("1");
   Eigen::MatrixXd Q = Eigen::MatrixXd::Identity(3, 3);
   Eigen::MatrixXd R = Eigen::MatrixXd::Identity(1, 1);
 
@@ -244,7 +243,6 @@ double LqrLocalPlannerROS::LqrController(double x_d, double y_d, double theta_d,
   Eigen::Vector2d u_d(v_d, w_d);
   Eigen::Vector3d e_p = Eigen::Vector3d(x_, y_, theta_) - p_d;
   regularizeAngle(e_p(2));
-  // ROS_WARN("2");
 
   Eigen::MatrixXd A = Eigen::MatrixXd::Zero(3, 3);
   A(0, 0) = 1.0;
@@ -252,11 +250,9 @@ double LqrLocalPlannerROS::LqrController(double x_d, double y_d, double theta_d,
   A(1, 1) = 1.0;
   A(1, 2) = d_t_ * u_d[0] * std::cos(theta_d);
   A(2, 2) = 1.0;
-  // ROS_WARN("3");
 
   Eigen::MatrixXd B = Eigen::MatrixXd::Zero(3, 1);
   B(2, 0) = u_d[0] * d_t_ / wheelbase_ / std::pow(std::cos(w_d), 2);
-  // ROS_WARN("4");
 
   double eps = 0.01;
   double diff = std::numeric_limits<double>::max();
@@ -322,7 +318,6 @@ double LqrLocalPlannerROS::LqrController(double x_d, double y_d, double theta_d,
 
 /**
  * @brief  Check if the goal pose has been achieved
- *
  * @return True if achieved, false otherwise
  */
 bool LqrLocalPlannerROS::isGoalReached()
@@ -342,8 +337,8 @@ bool LqrLocalPlannerROS::isGoalReached()
   if (goal_reached_)
   {
     ROS_INFO("Goal reached");
-    e_v_ = i_v_ = 0.0;
-    e_w_ = i_w_ = 0.0;
+    // e_v_ = i_v_ = 0.0;
+    // e_w_ = i_w_ = 0.0;
     return true;
   }
 
@@ -354,8 +349,8 @@ bool LqrLocalPlannerROS::isGoalReached()
     {
       goal_reached_ = true;
       robotStops();
-      e_v_ = i_v_ = 0.0;
-      e_w_ = i_w_ = 0.0;
+      // e_v_ = i_v_ = 0.0;
+      // e_w_ = i_w_ = 0.0;
       ROS_INFO("Goal reached");
     }
   }
