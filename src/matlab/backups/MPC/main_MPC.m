@@ -149,11 +149,11 @@ function [delta, v, ind, e, U, vd_p] = ...
     delta_u = zeros(Nx, Nu);
 
     a = [1 0 -vd1 * sin(t_d) * T;
-       0 1 vd1 * cos(t_d) * T;
-       0 0 1; ];
+         0 1 vd1 * cos(t_d) * T;
+         0 0 1; ];
     b = [cos(t_d) * T 0;
-       sin(t_d) * T 0;
-       tan(vd2) * T / L vd1 * T / (L * (cos(vd2) ^ 2))];
+         sin(t_d) * T 0;
+         tan(vd2) * T / L vd1 * T / (L * (cos(vd2) ^ 2))];
     A_cell = cell(2, 2);
     B_cell = cell(2, 1);
     A_cell{1, 1} = a;

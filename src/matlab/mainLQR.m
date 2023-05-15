@@ -18,8 +18,8 @@ params.R = 1 * eye(2);
 params.dt = 0.1;
 
 %% init state
-X0 = [-2, 0, -pi/2]; % init state: [x(m), y(m), theta(rad)]
-U0 = [0, 0];     % init control: [v(m/s), w(rad)]
+X0 = [-2, 0, -pi / 2]; % init state: [x(m), y(m), theta(rad)]
+U0 = [0, 0]; % init control: [v(m/s), w(rad)]
 
 %% trajectory
 [X_d, U_d] = getCircleTrajectory(0, 0, 2);
@@ -30,6 +30,7 @@ U = U0;
 vis_init = false;
 
 count = 0;
+
 while count < 150
     t = count * params.dt;
     idx = getTargetIndex(X, X_d);
@@ -38,8 +39,7 @@ while count < 150
     X = ackermanEOF(X, U);
 
     if ~vis_init
-        figure(1);
-        set(gcf, 'unit', 'normalized', 'position', [0.1, 0.3, 0.8, 0.32]);
+        figure(1); set(gcf, 'unit', 'normalized', 'position', [0.1, 0.3, 0.8, 0.32]);
 
         subplot(1, 3, 1); hold on; grid on; grid minor; axis equal;
         X_d_plot = plot(X_d(:, 1), X_d(:, 2), '--b', 'LineWidth', 1);
@@ -75,7 +75,7 @@ while count < 150
         set(w_plot, 'XData', [get(w_plot, 'XData') t]);
         set(w_plot, 'YData', [get(w_plot, 'YData') U(2)]);
     end
+
     drawnow;
     count = count + 1;
 end
-

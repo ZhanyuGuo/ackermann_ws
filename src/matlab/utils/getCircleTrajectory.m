@@ -5,10 +5,10 @@ function [X_d, U_d] = getCircleTrajectory(x_c, y_c, r)
 
     num_sample = 100;
     alpha = linspace(0, 2 * pi - 2 * pi / (num_sample + 1), num_sample);
-    
+
     x = x_c + r * cos(alpha);
     y = y_c + r * sin(alpha);
-    
+
     dx = diff(x);
     dy = diff(y);
     dx(end + 1) = dx(end);

@@ -5,12 +5,15 @@ function X = ackermanEOF(X, U)
     w_max = params.w_max;
 
     while (U(2) >= pi) || (U(2) <= - pi)
+
         if U(2) > pi
             U(2) = U(2) - 2 * pi;
         end
+
         if U(2) < -pi
             U(2) = U(2) + 2 * pi;
         end
+
     end
 
     U(2) = max(min(w_max, U(2)), -w_max);

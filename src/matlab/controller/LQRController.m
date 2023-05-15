@@ -2,18 +2,22 @@ function dU = LQRController(idx, X_d, U_d, X)
     global params;
     L = params.wheelbase;
     dt = params.dt;
-    
+
     XR = X_d(idx, :);
     UR = U_d(idx, :);
 
     dX = X - XR;
+
     while (abs(dX(3)) > pi)
+
         if dX(3) > pi
             dX(3) = dX(3) - 2 * pi;
         end
+
         if dX(3) < -pi
             dX(3) = dX(3) + 2 * pi;
         end
+
     end
 
     A = [1, 0, -dt * UR(1) * sin(XR(3));
