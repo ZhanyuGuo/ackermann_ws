@@ -13,7 +13,7 @@ function [XRef, ConRef] = CircleTrajectory(xo, yo, r, L)
     for theta =- pi + 2 * pi / 200:2 * pi / 1000:pi - 2 * pi / 100
         x(i) = r * cos(theta);
         y(i) = r * sin(theta);
-        vRef(i) = 40/3.6; %速度
+        vRef(i) = 40 / 3.6; %速度
         i = i + 1;
     end
 

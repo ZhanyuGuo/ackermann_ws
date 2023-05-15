@@ -53,7 +53,7 @@ while iCir < length(XRefCir)
     legend('实际轨迹', '小车', '参考轨迹')
 
     %控制量变化
-    t = 0:dt:(jCir - 1) * dt;
+    t = 0 : dt : (jCir - 1) * dt;
     %速度
     subplot(1, 3, 2);
     plot(t, UCir(:, 1), '-b', 'LineWidth', 1);

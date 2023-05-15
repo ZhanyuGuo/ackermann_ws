@@ -64,7 +64,6 @@ for i = 1:di:size(XCirplot, 1) - di
     % hold on
     subplot(1, 3, 1);
     plot(XRefCir(:, 1), XRefCir(:, 2), '--b', 'LineWidth', 1)
-    hold off
     plot(XCirplot(i + di, 1), XCirplot(i + di, 2), 'or');
 
     hold on
