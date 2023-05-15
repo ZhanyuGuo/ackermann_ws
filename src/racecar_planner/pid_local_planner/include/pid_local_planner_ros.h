@@ -164,7 +164,7 @@ private:
   double max_w_, min_w_, max_w_inc_;  // angular velocity
   double k_v_p_, k_v_i_, k_v_d_;      // pid controller params
   double k_w_p_, k_w_i_, k_w_d_;      // pid controller params
-  double k_p_, k_i_, k_d_;      // pid controller params
+  double k_p_, k_i_, k_d_;            // pid controller params
   double k_theta_;                    // pid controller params
 
   std::string base_frame_;
