@@ -1,4 +1,4 @@
-%% PID, LQR and MPC controller in ackerman car
+%% LQR controller in ackerman car
 
 %% environment
 % clear
