@@ -1,11 +1,15 @@
-function [dU, LatError] = MPCController(idx, X_d, U_d, X)
+function dU = MPCController(idx, X_d, U_d, X)
     global params;
-
+    dUmin = [-params.dv_max, -params.dw_max];
+    dUmax = [params.dv_max, params.dw_max];
+    ddUmin = [-params.ddv_max, -params.ddw_max];
+    ddUmax = [params.ddv_max, params.ddw_max];
     L = params.wheelbase;
     dim_X = params.dim_X;
     dim_U = params.dim_U;
     pre_step = params.pre_step;
     con_step = params.con_step;
+    rho = params.rho;
     Q = params.Q;
     R = params.R;
     dt = params.dt;
@@ -13,18 +17,32 @@ function [dU, LatError] = MPCController(idx, X_d, U_d, X)
     XR = X_d(idx, :);
     UR = U_d(idx, :);
     dX = X - XR;
+
+    while (abs(dX(3)) > pi)
+
+        if dX(3) > pi
+            dX(3) = dX(3) - 2 * pi;
+        end
+
+        if dX(3) < -pi
+            dX(3) = dX(3) + 2 * pi;
+        end
+
+    end
+
     dU = [0, 0];
 
-    % state matrix
-    a = [1, 0, - dt * UR(1) * sin(XR(3));
+    % original state matrix
+    a = [1, 0, -dt * UR(1) * sin(XR(3));
          0, 1, dt * UR(1) * cos(XR(3));
          0, 0, 1];
 
-    % control matrix
+    % original control matrix
     b = [dt * cos(XR(3)), 0;
          dt * sin(XR(3)), 0;
          dt * tan(UR(2)) / L, UR(1) * dt / (L * cos(UR(2)) ^ 2)];
 
+    % new state
     ksi = [dX, dU];
 
     % state matrix
@@ -44,8 +62,7 @@ function [dU, LatError] = MPCController(idx, X_d, U_d, X)
     % output matrix
     C = [eye(dim_X), zeros(dim_X, dim_U)];
 
-    %%MPC预测矩阵信息
-    %PHI矩阵
+    % phi matrix
     PHI_cell = cell(pre_step, 1);
 
     for i = 1:pre_step
@@ -54,7 +71,7 @@ function [dU, LatError] = MPCController(idx, X_d, U_d, X)
 
     PHI = cell2mat(PHI_cell);
 
-    %THETA矩阵
+    % theta matrix
     THETA_cell = cell(pre_step, con_step);
 
     for i = 1:pre_step
@@ -73,26 +90,24 @@ function [dU, LatError] = MPCController(idx, X_d, U_d, X)
 
     THETA = cell2mat(THETA_cell);
 
-    %%二次型目标函数矩阵信息
-    %H矩阵
+    % H matrix
     H_cell = cell(2, 2);
     H_cell{1, 1} = THETA' * Q * THETA + R;
     H_cell{1, 2} = zeros(dim_U * con_step, 1);
     H_cell{2, 1} = zeros(1, dim_U * con_step);
-    H_cell{2, 2} = params.rho;
+    H_cell{2, 2} = rho;
     H = cell2mat(H_cell);
 
-    %E矩阵
+    % E matrix
     E = PHI * ksi';
 
-    %g矩阵
+    % g matrix
     g_cell = cell(2, 1);
     g_cell{1, 1} = E' * Q * THETA;
     g_cell{1, 2} = 0;
     g = cell2mat(g_cell);
 
-    %%不等式约束矩阵信息
-    %AI矩阵
+    % AI matrix
     At = zeros(con_step, con_step);
 
     for i = 1:con_step
@@ -101,37 +116,34 @@ function [dU, LatError] = MPCController(idx, X_d, U_d, X)
 
     AI = kron(At, eye(dim_U));
 
-    %dUt矩阵
+    % dUt matrix
     dUt = kron(ones(con_step, 1), dU');
 
-    %控制量约束矩阵
-    dUMIN = kron(ones(con_step, 1), [-params.dv_max, -params.dw_max]');
-    dUMAX = kron(ones(con_step, 1), [params.dv_max, params.dw_max]');
-    ddUMIN = kron(ones(con_step, 1), [-params.ddv_max, -params.ddw_max]');
-    ddUMAX = kron(ones(con_step, 1), [params.ddv_max, params.ddw_max]');
+    % control constraints
+    dUMIN = kron(ones(con_step, 1), dUmin');
+    dUMAX = kron(ones(con_step, 1), dUmax');
+    ddUMIN = kron(ones(con_step, 1), ddUmin');
+    ddUMAX = kron(ones(con_step, 1), ddUmax');
 
-    %%不等式约束求解矩阵信息（Ax <= b)
-    %矩阵A
+    % inequality
     Acons_cell = {AI, zeros(dim_U * con_step, 1);
-                  - AI, zeros(dim_U * con_step, 1)};
+                  -AI, zeros(dim_U * con_step, 1)};
     Acons = cell2mat(Acons_cell);
 
-    %向量b
+    % b
     bcons_cell = {dUMAX - dUt;
-                  - dUMIN + dUt};
+                  -dUMIN + dUt};
     bcons = cell2mat(bcons_cell);
 
-    %上下界约束
+    % bound
     lb = [ddUMIN; 0];
     ub = [ddUMAX; 1];
 
-    %%求解
-    options = optimoptions('quadprog', 'Display', 'iter', 'MaxIterations', 100, 'TolFun', 1e-16);
+    % solve
+    options = optimoptions('quadprog', 'MaxIterations', 100, 'TolFun', 1e-16);
     DU = quadprog(H, g, Acons, bcons, [], [], lb, ub, [], options);
 
-    %%计算输出
+    % get control
     dU(1) = DU(1);
     dU(2) = DU(2);
-
-    LatError = dX(2) * cos(X(3)) - dX(1) * sin(X(3));
 end

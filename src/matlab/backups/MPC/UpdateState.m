@@ -18,19 +18,19 @@ function [X, U] = UpdateState(iCir, X, U, dU, URef, L, MaxSteer, dt)
     U(1) = URef(iCir, 1) + dU(1);
     U(2) = URef(iCir, 2) + dU(2);
 
-    while (U(2) >= pi) || (U(2) <= - pi)
+    while (U(2) >= pi) || (U(2) <= -pi)
 
         if U(2) > pi
             U(2) = U(2) - 2 * pi;
         end
 
-        if U(2) <- pi
+        if U(2) < -pi
             U(2) = U(2) + 2 * pi;
         end
 
     end
 
-    U(2) = max(min(MaxSteer, U(2)), - MaxSteer);
+    U(2) = max(min(MaxSteer, U(2)), -MaxSteer);
 
     X(3) = X(3) + U(1) * tan(U(2)) * dt / L;
 end

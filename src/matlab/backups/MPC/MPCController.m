@@ -27,7 +27,7 @@ function [dU, LatError] = MPCController(idx, XRef, URef, X, dUmin, dUmax, ...
 
     %%原始状态空间信息
     %原始状态矩阵
-    a = [1, 0, - dt * UR(1) * sin(XR(3));
+    a = [1, 0, -dt * UR(1) * sin(XR(3));
          0, 1, dt * UR(1) * cos(XR(3));
          0, 0, 1];
 
@@ -126,12 +126,12 @@ function [dU, LatError] = MPCController(idx, XRef, URef, X, dUmin, dUmax, ...
     %%不等式约束求解矩阵信息（Ax <= b)
     %矩阵A
     Acons_cell = {AI, zeros(Unum * Constep, 1);
-                  - AI, zeros(Unum * Constep, 1)};
+                  -AI, zeros(Unum * Constep, 1)};
     Acons = cell2mat(Acons_cell);
 
     %向量b
     bcons_cell = {dUMAX - dUt;
-                  - dUMIN + dUt};
+                  -dUMIN + dUt};
     bcons = cell2mat(bcons_cell);
 
     %上下界约束
