@@ -1,4 +1,4 @@
-%% MPC controller in ackerman car
+%% MPC controller based on the Ackerman car
 
 %% environment
 % clear
@@ -9,10 +9,10 @@ addpath("./utils/", "./controller/");
 
 %% initialization
 % init state: [x(m), y(m), theta(rad)]
-X0 = [-2, 0, -pi / 4];
+X_0 = [-2, 0, -pi / 4];
 
 % init control: [v(m/s), w(rad)]
-U0 = [0, 0];
+U_0 = [0, 0];
 
 vis_init = false;
 
@@ -21,37 +21,37 @@ global params;
 
 params.wheelbase = 0.335;
 params.v_max = 1.0;
-params.w_max = pi / 3;
-params.dt = 0.1;
+params.delta_max = pi / 4;
+params.dt = 0.05;
 
 params.dv_max = 1.0;
-params.dw_max = pi / 3;
+params.ddelta_max = pi / 4;
 params.ddv_max = 1.0;
-params.ddw_max = pi / 3;
+params.dddelta_max = pi / 4;
 
-params.dim_X = length(X0);
-params.dim_U = length(U0);
+params.dim_X = length(X_0);
+params.dim_U = length(U_0);
 
 params.pre_step = 10;
 params.con_step = 5;
 params.rho = 10;
-params.Q = 1 * eye(params.dim_X * params.pre_step);
+params.Q = 10 * eye(params.dim_X * params.pre_step);
 params.R = 1 * eye(params.dim_U * params.con_step);
 
 %% trajectory
-% [X_d, U_d] = getCircleTrajectory(0, 0, 2);
-[X_d, U_d] = getSinTrajectory(-2, 0, 2);
+[X_d, U_d] = getCircleTrajectory(0, 0, 2);
+% [X_d, U_d] = getSinTrajectory(-2, 0, 2);
 
 %% main proccess
-X = X0;
-U = U0;
+X = X_0;
+U = U_0;
 
 t = 0;
 dt = params.dt;
 t_total = 10;
 
 v_max = params.v_max;
-w_max = params.w_max;
+delta_max = params.delta_max;
 
 idx = 1;
 
@@ -82,7 +82,7 @@ while (idx < size(X_d, 1) && t < t_total)
 
         subplot(1, 3, 3); hold on;
         w_plot = plot(t, U(2), '-r', 'LineWidth', 1);
-        axis([0, t_total * 1.1, -w_max * 1.1, w_max * 1.1]); grid on;
+        axis([0, t_total * 1.1, -delta_max * 1.1, delta_max * 1.1]); grid on;
         xlabel("time(s)"); ylabel("front steer angle(rad)"); title("Steer Angle");
 
         % gif

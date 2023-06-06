@@ -1,4 +1,4 @@
-%% LQR controller in ackerman car
+%% LQR controller based on the Ackerman car
 
 %% environment
 % clear
@@ -9,10 +9,10 @@ addpath("./utils/", "./controller/");
 
 %% init state
 % init state: [x(m), y(m), theta(rad)]
-X0 = [-2, 0, -pi / 4];
+X_0 = [-2, 0, -pi / 4];
 
 % init control: [v(m/s), w(rad)]
-U0 = [0, 0];
+U_0 = [0, 0];
 
 vis_init = false;
 
@@ -21,10 +21,10 @@ global params;
 
 params.wheelbase = 0.335;
 params.v_max = 1.0;
-params.w_max = pi / 3;
-params.dt = 0.1;
+params.delta_max = pi / 4;
+params.dt = 0.05;
 
-params.Q = 1 * eye(3);
+params.Q = 10 * eye(3);
 params.R = 1 * eye(2);
 
 %% trajectory
@@ -32,8 +32,8 @@ params.R = 1 * eye(2);
 [X_d, U_d] = getSinTrajectory(-2, 0, 2);
 
 %% main proccess
-X = X0;
-U = U0;
+X = X_0;
+U = U_0;
 
 t = 0;
 dt = params.dt;
@@ -68,7 +68,7 @@ while (idx < size(X_d, 1) && t < t_total)
 
         subplot(1, 3, 3); hold on;
         w_plot = plot(t, U(2), '-r', 'LineWidth', 1);
-        axis([0, t_total * 1.1, -params.w_max * 1.1, params.w_max * 1.1]); grid on;
+        axis([0, t_total * 1.1, -params.delta_max * 1.1, params.delta_max * 1.1]); grid on;
         xlabel("time(s)"); ylabel("front steer angle(rad)"); title("Steer Angle");
 
         % gif

@@ -1,9 +1,9 @@
 function dU = MPCController(idx, X_d, U_d, X)
     global params;
-    dUmin = [-params.dv_max, -params.dw_max];
-    dUmax = [params.dv_max, params.dw_max];
-    ddUmin = [-params.ddv_max, -params.ddw_max];
-    ddUmax = [params.ddv_max, params.ddw_max];
+    dUmin = [-params.dv_max, -params.ddelta_max];
+    dUmax = [params.dv_max, params.ddelta_max];
+    ddUmin = [-params.ddv_max, -params.dddelta_max];
+    ddUmax = [params.ddv_max, params.dddelta_max];
     L = params.wheelbase;
     dim_X = params.dim_X;
     dim_U = params.dim_U;
@@ -14,33 +14,23 @@ function dU = MPCController(idx, X_d, U_d, X)
     R = params.R;
     dt = params.dt;
 
-    XR = X_d(idx, :);
-    UR = U_d(idx, :);
-    dX = X - XR;
+    X_R = X_d(idx, :);
+    U_R = U_d(idx, :);
+    dX = X - X_R;
 
-    while (abs(dX(3)) > pi)
-
-        if dX(3) > pi
-            dX(3) = dX(3) - 2 * pi;
-        end
-
-        if dX(3) < -pi
-            dX(3) = dX(3) + 2 * pi;
-        end
-
-    end
+    dX(3) = mod(dX(3) + pi, 2 * pi) - pi;
 
     dU = [0, 0];
 
     % original state matrix
-    a = [1, 0, -dt * UR(1) * sin(XR(3));
-         0, 1, dt * UR(1) * cos(XR(3));
+    a = [1, 0, -dt * U_R(1) * sin(X_R(3));
+         0, 1, dt * U_R(1) * cos(X_R(3));
          0, 0, 1];
 
     % original control matrix
-    b = [dt * cos(XR(3)), 0;
-         dt * sin(XR(3)), 0;
-         dt * tan(UR(2)) / L, UR(1) * dt / (L * cos(UR(2)) ^ 2)];
+    b = [dt * cos(X_R(3)), 0;
+         dt * sin(X_R(3)), 0;
+         dt * tan(U_R(2)) / L, U_R(1) * dt / (L * cos(U_R(2)) ^ 2)];
 
     % new state
     ksi = [dX, dU];
