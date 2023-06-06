@@ -39,8 +39,8 @@ params.Q = 10 * eye(params.dim_X * params.pre_step);
 params.R = 1 * eye(params.dim_U * params.con_step);
 
 %% trajectory
-[X_d, U_d] = getCircleTrajectory(0, 0, 2);
-% [X_d, U_d] = getSinTrajectory(-2, 0, 2);
+% [X_d, U_d] = getCircleTrajectory(0, 0, 2);
+[X_d, U_d] = getSinTrajectory(-2, 0, 2);
 
 %% main proccess
 X = X_0;
