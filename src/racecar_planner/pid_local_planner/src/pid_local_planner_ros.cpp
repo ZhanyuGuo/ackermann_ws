@@ -9,7 +9,13 @@ namespace pid_local_planner
 /**
  * @brief Construct a new PidLocalPlannerROS object
  */
-PidLocalPlannerROS::PidLocalPlannerROS() : initialized_(false)
+PidLocalPlannerROS::PidLocalPlannerROS()
+  : initialized_(false)
+  , tf_(nullptr)
+  , costmap_ros_(nullptr)
+  , goal_reached_(false)
+  , base_frame_("base_link")
+  // , travel_flag_(false)
 {
   // ROS_WARN("PidLocalPlannerROS::PidLocalPlannerROS()");
   // NOTE: afterward, initialize() will be called automatically
@@ -47,10 +53,9 @@ void PidLocalPlannerROS::initialize(std::string name, tf2_ros::Buffer* tf, costm
 
   if (!initialized_)
   {
+    initialized_ = true;
     tf_ = tf;
     costmap_ros_ = costmap_ros;
-    initialized_ = true;
-    base_frame_ = "base_link";
 
     ros::NodeHandle nh = ros::NodeHandle("~/" + name);
 
@@ -86,6 +91,10 @@ void PidLocalPlannerROS::initialize(std::string name, tf2_ros::Buffer* tf, costm
     nh.param("/move_base/controller_frequency", controller_freqency_, 10.0);
     d_t_ = 1 / controller_freqency_;
 
+    e_v_ = i_v_ = 0.0;
+    e_w_ = i_w_ = 0.0;
+    e_ = i_ = 0.0;
+
     odom_helper_ = new base_local_planner::OdometryHelperRos("/odom");
     target_pose_pub_ = nh.advertise<geometry_msgs::PoseStamped>("/target_pose", 10);
     current_pose_pub_ = nh.advertise<geometry_msgs::PoseStamped>("/current_pose", 10);
@@ -93,9 +102,6 @@ void PidLocalPlannerROS::initialize(std::string name, tf2_ros::Buffer* tf, costm
     // timer
     cpu_time_sum_.fromNSec(0);
     cpu_time_count_ = 0;
-
-    // set true to init some logs
-    goal_reached_ = true;
 
     ROS_INFO("PID planner initialized!");
   }
@@ -122,17 +128,34 @@ bool PidLocalPlannerROS::setPlan(const std::vector<geometry_msgs::PoseStamped>& 
 
   // ROS_INFO("Got new plan");
 
+  // if (!travel_flag_)
+  // {
+    // travel_flag_ = true;
+    // travel_begin_ = ros::WallTime::now();
+
+    // reset goal_reached_ flag
+    // goal_reached_ = false;
+  // }
+
   // set new plan
+  global_plan_.clear();
   global_plan_ = orig_global_plan;
+
   plan_index_ = 0;
+
+  if (goal_x_ != global_plan_.back().pose.position.x || goal_y_ != global_plan_.back().pose.position.y)
+  {
+    goal_x_ = global_plan_.back().pose.position.x;
+    goal_y_ = global_plan_.back().pose.position.y;
+    goal_reached_ = false;
+    travel_begin_ = ros::WallTime::now();
+  }
 
   // if (isGoalReached())
   // {
   //   ROS_ERROR("PID planner goal reached without motion.");
   //   return false;
   // }
-
-  // goal_reached_ = false;
 
   return true;
 
@@ -148,43 +171,50 @@ bool PidLocalPlannerROS::isGoalReached()
 {
   // ROS_WARN("PidLocalPlannerROS::isGoalReached()");
 
-  if (!initialized_)
+  if (goal_reached_)
   {
-    ROS_ERROR("This planner has not been initialized, please call initialize() before using this planner");
-    return false;
+    ROS_INFO("GOAL Reached!");
+    return true;
   }
+  return false;
 
-  if (!costmap_ros_->getRobotPose(current_ps_))
-  {
-    ROS_ERROR("Could not get robot pose");
-    return false;
-  }
+  // if (!initialized_)
+  // {
+  //   ROS_ERROR("This planner has not been initialized, please call initialize() before using this planner");
+  //   return false;
+  // }
 
-  x_ = current_ps_.pose.position.x;
-  y_ = current_ps_.pose.position.y;
-  theta_ = tf2::getYaw(current_ps_.pose.orientation);  // [-pi, pi]
+  // if (!costmap_ros_->getRobotPose(current_ps_))
+  // {
+  //   ROS_ERROR("Could not get robot pose");
+  //   return false;
+  // }
 
-  if (getGoalPositionDistance(global_plan_.back(), x_, y_) < p_precision_)
-  {
-    goal_reached_ = true;
+  // x_ = current_ps_.pose.position.x;
+  // y_ = current_ps_.pose.position.y;
+  // theta_ = tf2::getYaw(current_ps_.pose.orientation);  // [-pi, pi]
 
-    ros::WallDuration travel_time = ros::WallTime::now() - travel_begin_;
-    ROS_INFO("travel time: %.2f s", travel_time.toSec());
-  }
-  else
-  {
-    if (goal_reached_)
-    {
-      travel_begin_ = ros::WallTime::now();
+  // if (getGoalPositionDistance(global_plan_.back(), x_, y_) < p_precision_)
+  // {
+  //   goal_reached_ = true;
 
-      e_v_ = i_v_ = 0.0;
-      e_w_ = i_w_ = 0.0;
-      e_ = i_ = 0.0;
-    }
-    goal_reached_ = false;
-  }
+  //   ros::WallDuration travel_time = ros::WallTime::now() - travel_begin_;
+  //   ROS_INFO("travel time: %.2f s", travel_time.toSec());
+  // }
+  // else
+  // {
+  //   if (goal_reached_)
+  //   {
+  //     travel_begin_ = ros::WallTime::now();
 
-  return goal_reached_;
+  //     e_v_ = i_v_ = 0.0;
+  //     e_w_ = i_w_ = 0.0;
+  //     e_ = i_ = 0.0;
+  //   }
+  //   goal_reached_ = false;
+  // }
+
+  // return goal_reached_;
 
   // if (plan_index_ > global_plan_.size() - 1)
   // {
@@ -203,8 +233,7 @@ bool PidLocalPlannerROS::isGoalReached()
 }
 
 /**
- * @brief Given the current position, orientation, and velocity of the robot, compute velocity commands to send to
- * the base
+ * @brief Given the current position, orientation, and velocity of the robot, compute the velocity commands
  * @param cmd_vel will be filled with the velocity command to be passed to the robot base
  * @return  true if a valid trajectory was found, else false
  */
@@ -220,17 +249,17 @@ bool PidLocalPlannerROS::computeVelocityCommands(geometry_msgs::Twist& cmd_vel)
     return false;
   }
 
-  if (goal_reached_)
-  {
-    ROS_ERROR("PID planner goal reached without motion.");
-    return false;
-  }
+  // if (goal_reached_)
+  // {
+  //   ROS_ERROR("PID planner goal reached without motion.");
+  //   return false;
+  // }
 
   // current pose
-  // costmap_ros_->getRobotPose(current_ps_);
-  // x_ = current_ps_.pose.position.x;
-  // y_ = current_ps_.pose.position.y;
-  // theta_ = tf2::getYaw(current_ps_.pose.orientation);  // [-pi, pi]
+  costmap_ros_->getRobotPose(current_ps_);
+  x_ = current_ps_.pose.position.x;
+  y_ = current_ps_.pose.position.y;
+  theta_ = tf2::getYaw(current_ps_.pose.orientation);  // [-pi, pi]
   // ROS_WARN("theta_ %.2f", theta_);
 
   double theta_d, theta_dir, theta_trj;
@@ -248,9 +277,11 @@ bool PidLocalPlannerROS::computeVelocityCommands(geometry_msgs::Twist& cmd_vel)
 
     int next_plan_index = plan_index_ + 1;
     if (next_plan_index < global_plan_.size())
+    {
       // theta on the trajectory
       theta_trj = atan2((global_plan_[next_plan_index].pose.position.y - y_d),
                         (global_plan_[next_plan_index].pose.position.x - x_d));
+    }
 
     // if the difference is greater than PI, it will get a wrong result
     if (std::fabs(theta_trj - theta_dir) > M_PI)
@@ -283,35 +314,36 @@ bool PidLocalPlannerROS::computeVelocityCommands(geometry_msgs::Twist& cmd_vel)
   }
 
   // odometry observation - getting robot velocities in robot frame
-  nav_msgs::Odometry base_odom;
-  odom_helper_->getOdom(base_odom);
+  // nav_msgs::Odometry base_odom;
+  // odom_helper_->getOdom(base_odom);
 
   // get final goal orientation - Quaternion to Euler
   // final_rpy_ = getEulerAngles(global_plan_.back());
   // ROS_WARN("final_rpy_[2] = %.2f", final_rpy_[2]);
 
   // position reached
-  // if (getGoalPositionDistance(global_plan_.back(), x_, y_) < p_precision_)
-  // {
-  // double fe_theta = final_rpy_[2] - theta_;
-  // regularizeAngle(fe_theta);
+  if (getGoalPositionDistance(global_plan_.back(), x_, y_) < p_precision_)
+  {
+    // double fe_theta = final_rpy_[2] - theta_;
+    // regularizeAngle(fe_theta);
 
-  // orientation reached
-  // if (std::fabs(fe_theta) < o_precision_)
-  // {
-  // cmd_vel.linear.x = 0.0;
-  // cmd_vel.angular.z = 0.0;
+    // orientation reached
+    // if (std::fabs(fe_theta) < o_precision_)
+    // {
+    cmd_vel.linear.x = 0.0;
+    cmd_vel.angular.z = 0.0;
 
-  // goal_reached_ = true;
+    goal_reached_ = true;
+    // travel_flag_ = false;
 
-  // e_v_ = i_v_ = 0.0;
-  // e_w_ = i_w_ = 0.0;
-  // e_ = i_ = 0.0;
+    e_v_ = i_v_ = 0.0;
+    e_w_ = i_w_ = 0.0;
+    e_ = i_ = 0.0;
 
-  // ros::WallDuration travel_time = ros::WallTime::now() - travel_begin_;
-  // ROS_INFO("travel time: %.2f s", travel_time.toSec());
-
-  // }
+    ros::WallDuration travel_time = ros::WallTime::now() - travel_begin_;
+    ROS_INFO("travel time: %.2f s", travel_time.toSec());
+    // }
+  }
   // // orientation not reached
   // else
   // {
@@ -326,20 +358,20 @@ bool PidLocalPlannerROS::computeVelocityCommands(geometry_msgs::Twist& cmd_vel)
   //   cmd_vel.angular.z = AngularPIDController(base_odom, theta_d, theta_);
   // }
   // posistion not reached
-  // else
-  // {
-  /****************
-   * original PID *
-   ****************/
-  // cmd_vel.linear.x = LinearPIDController(base_odom, b_x_d, b_y_d);
-  // cmd_vel.angular.z = AngularPIDController(base_odom, theta_d, theta_);
+  else
+  {
+    /****************
+     * original PID *
+     ****************/
+    // cmd_vel.linear.x = LinearPIDController(base_odom, b_x_d, b_y_d);
+    // cmd_vel.angular.z = AngularPIDController(base_odom, theta_d, theta_);
 
-  /***********************
-   * only steering angle *
-   ***********************/
-  cmd_vel.linear.x = max_v_;
-  cmd_vel.angular.z = AngleController(b_x_d, b_y_d, theta_d, theta_);
-  // }
+    /***********************
+     * only steering angle *
+     ***********************/
+    cmd_vel.linear.x = max_v_;
+    cmd_vel.angular.z = AngleController(b_x_d, b_y_d, theta_d, theta_);
+  }
 
   // ROS_INFO("velocity = %.2f m/s, omega = %.2f rad/s", cmd_vel.linear.x, cmd_vel.angular.z);
 
@@ -441,7 +473,7 @@ double PidLocalPlannerROS::AngularPIDController(nav_msgs::Odometry& base_odometr
 }
 
 /**
- * @brief PID only control steering angle
+ * @brief PID only control steer angle
  * @param b_x_d desired x in body frame
  * @param b_y_d desired y in body frame
  * @param theta_d desired theta
@@ -499,10 +531,5 @@ double PidLocalPlannerROS::getGoalPositionDistance(const geometry_msgs::PoseStam
 void PidLocalPlannerROS::regularizeAngle(double& angle)
 {
   angle = std::fmod(angle + M_PI, 2 * M_PI) - M_PI;
-  // while (angle > M_PI)
-  //   angle -= 2 * M_PI;
-
-  // while (angle <= -M_PI)
-  //   angle += 2 * M_PI;
 }
 }  // namespace pid_local_planner

@@ -31,7 +31,7 @@ public:
    * @param tf          a pointer to a transform listener
    * @param costmap_ros the cost map to use for assigning costs to trajectories
    */
-  PidLocalPlannerROS(std::string name, tf2_ros::Buffer* tf, costmap_2d::Costmap2DROS* costmap_ros);
+  // PidLocalPlannerROS(std::string name, tf2_ros::Buffer* tf, costmap_2d::Costmap2DROS* costmap_ros);
 
   /**
    * @brief Destroy the PidLocalPlannerROS object
@@ -54,8 +54,13 @@ public:
   bool setPlan(const std::vector<geometry_msgs::PoseStamped>& orig_global_plan);
 
   /**
-   * @brief Given the current position, orientation, and velocity of the robot, compute velocity commands to send to
-   * the base
+   * @brief  Check if the goal pose has been achieved
+   * @return True if achieved, false otherwise
+   */
+  bool isGoalReached();
+
+  /**
+   * @brief Given the current position, orientation, and velocity of the robot, compute the velocity commands
    * @param cmd_vel will be filled with the velocity command to be passed to the robot base
    * @return  true if a valid trajectory was found, else false
    */
@@ -80,7 +85,7 @@ public:
   double AngularPIDController(nav_msgs::Odometry& base_odometry, double theta_d, double theta);
 
   /**
-   * @brief PID only control steering angle
+   * @brief PID only control steer angle
    * @param b_x_d desired x in body frame
    * @param b_y_d desired y in body frame
    * @param theta_d desired theta
@@ -88,13 +93,6 @@ public:
    * @return angular velocity
    */
   double AngleController(double b_x_d, double b_y_d, double theta_d, double theta);
-
-  /**
-   * @brief  Check if the goal pose has been achieved
-   *
-   * @return True if achieved, false otherwise
-   */
-  bool isGoalReached();
 
   /**
    * @brief Get the distance to the goal
@@ -145,9 +143,9 @@ private:
     y = dst.pose.position.y;
   }
 
-  costmap_2d::Costmap2DROS* costmap_ros_;
-  tf2_ros::Buffer* tf_;
   bool initialized_, goal_reached_;
+  tf2_ros::Buffer* tf_;
+  costmap_2d::Costmap2DROS* costmap_ros_;
   std::vector<geometry_msgs::PoseStamped> global_plan_;
   geometry_msgs::PoseStamped target_ps_, current_ps_;
   int plan_index_;
@@ -174,6 +172,9 @@ private:
   ros::WallDuration cpu_time_sum_;
   unsigned int cpu_time_count_;
   ros::WallTime travel_begin_;
+  // bool travel_flag_;
+
+  double goal_x_, goal_y_;
 };
 };  // namespace pid_local_planner
 
