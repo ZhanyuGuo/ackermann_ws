@@ -13,7 +13,7 @@ LqrLocalPlannerROS:
   max_v_inc: 0.5
 
   # angular velocity
-  max_w: 1.0
+  max_w: 0.79
   min_w: 0.0
   max_w_inc: 1.0
 

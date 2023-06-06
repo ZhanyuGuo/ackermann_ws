@@ -5,11 +5,11 @@ MpcLocalPlannerROS:
   robot:
     type: "simple_car"
     simple_car:
-      wheelbase: 0.4
+      wheelbase: 0.335
       front_wheel_driving: False
       max_vel_x: 1.0
       max_vel_x_backwards: 0.2
-      max_steering_angle: 1.0
+      max_steering_angle: 0.79
       acc_lim_x: 0.5 # deactive bounds with zero
       dec_lim_x: 0.5 # deactive bounds with zero
       max_steering_rate: 0.5 # deactive bounds with zero
@@ -19,7 +19,7 @@ MpcLocalPlannerROS:
     type: "line"
     radius: 0.2 # for type "circular"
     line_start: [0.0, 0.0] # for type "line"
-    line_end: [0.4, 0.0] # for type "line"
+    line_end: [0.335, 0.0] # for type "line"
     front_offset: 0.2 # for type "two_circles"
     front_radius: 0.2 # for type "two_circles"
     rear_offset: 0.2 # for type "two_circles"
@@ -39,7 +39,7 @@ MpcLocalPlannerROS:
 
   ## Collision avoidance
   collision_avoidance:
-    min_obstacle_dist: 0.27 # Note, this parameter must be chosen w.r.t. the footprint_model
+    min_obstacle_dist: 0.3 # Note, this parameter must be chosen w.r.t. the footprint_model
     enable_dynamic_obstacles: False
     force_inclusion_dist: 0.5
     cutoff_dist: 2.5

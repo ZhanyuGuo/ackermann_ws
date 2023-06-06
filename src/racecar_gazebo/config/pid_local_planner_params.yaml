@@ -4,7 +4,7 @@ PidLocalPlannerROS:
   o_window: 1.0
 
   # goal reached tolerance
-  p_precision: 0.1
+  p_precision: 0.2
   o_precision: 0.5
 
   # linear velocity
@@ -13,7 +13,7 @@ PidLocalPlannerROS:
   max_v_inc: 0.5
 
   # angular velocity
-  max_w: 1.0
+  max_w: 0.79
   min_w: 0.0
   max_w_inc: 1.0
 
@@ -25,5 +25,9 @@ PidLocalPlannerROS:
   k_w_p: 1.00
   k_w_i: 0.01
   k_w_d: 0.10
+
+  k_p: 1.00
+  k_i: 0.01
+  k_d: 0.10
 
   k_theta: 1.0 # 0.5

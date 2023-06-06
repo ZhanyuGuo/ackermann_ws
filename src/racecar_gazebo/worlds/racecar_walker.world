@@ -39,6 +39,12 @@
       <name>walker_racecourse</name>
     </include>
 
-
+    <gui fullscreen='0'>
+      <camera name='user_camera'>
+        <pose>24.3814 -7.70217 10.2123 0 0.331643 2.86019</pose>
+        <view_controller>orbit</view_controller>
+        <projection_type>perspective</projection_type>
+      </camera>
+    </gui>
   </world>
 </sdf>

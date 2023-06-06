@@ -218,6 +218,10 @@ void MpcLocalPlannerROS::initialize(std::string name, tf2_ros::Buffer* tf, costm
         ros::NodeHandle nh_move_base("~");
         nh_move_base.param("controller_frequency", _params.controller_frequency, _params.controller_frequency);
 
+        cpu_time_sum_.fromNSec(0);
+        cpu_time_count_ = 0;
+        travel_flag_ = false;
+
         // set initialized flag
         _initialized = true;
 
@@ -238,6 +242,12 @@ bool MpcLocalPlannerROS::setPlan(const std::vector<geometry_msgs::PoseStamped>& 
         return false;
     }
 
+    if (!travel_flag_)
+    {
+        travel_flag_ = true;
+        travel_begin_ = ros::WallTime::now();
+    }
+
     // store the global plan
     _global_plan.clear();
     _global_plan = orig_global_plan;
@@ -253,11 +263,23 @@ bool MpcLocalPlannerROS::setPlan(const std::vector<geometry_msgs::PoseStamped>& 
 
 bool MpcLocalPlannerROS::computeVelocityCommands(geometry_msgs::Twist& cmd_vel)
 {
+    ros::WallTime begin = ros::WallTime::now();
+    
     std::string dummy_message;
     geometry_msgs::PoseStamped dummy_pose;
     geometry_msgs::TwistStamped dummy_velocity, cmd_vel_stamped;
     uint32_t outcome = computeVelocityCommands(dummy_pose, dummy_velocity, cmd_vel_stamped, dummy_message);
     cmd_vel          = cmd_vel_stamped.twist;
+
+    cpu_time_sum_ += ros::WallTime::now() - begin;
+    ++cpu_time_count_;
+    if (cpu_time_count_ == 100)
+    {
+        ROS_INFO("duration = %ld ns", cpu_time_sum_.toNSec() / cpu_time_count_);
+        cpu_time_sum_.fromNSec(0);
+        cpu_time_count_ = 0;
+    }
+
     return outcome == mbf_msgs::ExePathResult::SUCCESS;
 }
 
@@ -318,6 +340,11 @@ uint32_t MpcLocalPlannerROS::computeVelocityCommands(const geometry_msgs::PoseSt
     if (std::abs(std::sqrt(dx * dx + dy * dy)) < _params.xy_goal_tolerance && std::abs(delta_orient) < _params.yaw_goal_tolerance)
     {
         _goal_reached = true;
+
+        ros::WallDuration travel_time = ros::WallTime::now() - travel_begin_;
+        ROS_INFO("travel time: %.2f s", travel_time.toSec());
+        travel_flag_ = false;
+
         return mbf_msgs::ExePathResult::SUCCESS;
     }
 

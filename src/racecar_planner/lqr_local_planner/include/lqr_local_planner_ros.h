@@ -167,6 +167,10 @@ private:
 
   double wheelbase_;
   int max_iter_;
+
+  ros::WallDuration cpu_time_sum_;
+  unsigned int cpu_time_count_;
+  ros::WallTime travel_begin_;
 };
 };  // namespace lqr_local_planner
 

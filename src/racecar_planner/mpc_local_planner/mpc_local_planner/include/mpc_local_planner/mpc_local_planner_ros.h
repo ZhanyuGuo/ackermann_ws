@@ -462,6 +462,11 @@ class MpcLocalPlannerROS : public nav_core::BaseLocalPlanner, public mbf_costmap
 
     } _costmap_conv_params;
 
+    ros::WallDuration cpu_time_sum_;
+    unsigned int cpu_time_count_;
+    bool travel_flag_;
+    ros::WallTime travel_begin_;
+
  public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 };

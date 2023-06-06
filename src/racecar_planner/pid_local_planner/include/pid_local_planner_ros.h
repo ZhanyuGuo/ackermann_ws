@@ -122,11 +122,11 @@ private:
   /**
    * @brief Stop the robot
    */
-  void robotStops()
-  {
-    goal_reached_ = true;
-    ROS_INFO("Robot will stop.");
-  }
+  // void robotStops()
+  // {
+  //   goal_reached_ = true;
+  //   ROS_INFO("Robot will stop.");
+  // }
 
   /**
    * @brief Transform pose to body frame
@@ -170,6 +170,10 @@ private:
   std::string base_frame_;
   base_local_planner::OdometryHelperRos* odom_helper_;
   ros::Publisher target_pose_pub_, current_pose_pub_;
+
+  ros::WallDuration cpu_time_sum_;
+  unsigned int cpu_time_count_;
+  ros::WallTime travel_begin_;
 };
 };  // namespace pid_local_planner
 

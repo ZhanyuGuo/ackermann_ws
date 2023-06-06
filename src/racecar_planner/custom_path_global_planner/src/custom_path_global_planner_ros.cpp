@@ -75,7 +75,7 @@ bool CustomPathGlobalPlannerROS::makePlan(const geometry_msgs::PoseStamped& star
   double x = start.pose.position.x;
   double y = start.pose.position.y;
 
-  double x_c = 0.0;
+  double x_c = 0.1;
   double y_c = 0.0;
   double r = 3.0;
 
