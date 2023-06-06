@@ -9,9 +9,10 @@ namespace pid_local_planner
 /**
  * @brief Construct a new PidLocalPlannerROS object
  */
-PidLocalPlannerROS::PidLocalPlannerROS() : costmap_ros_(NULL), tf_(NULL), initialized_(false)
+PidLocalPlannerROS::PidLocalPlannerROS() : initialized_(false)
 {
   // ROS_WARN("PidLocalPlannerROS::PidLocalPlannerROS()");
+  // NOTE: afterward, initialize() will be called automatically
 }
 
 /**
@@ -49,6 +50,7 @@ void PidLocalPlannerROS::initialize(std::string name, tf2_ros::Buffer* tf, costm
     tf_ = tf;
     costmap_ros_ = costmap_ros;
     initialized_ = true;
+    base_frame_ = "base_link";
 
     ros::NodeHandle nh = ros::NodeHandle("~/" + name);
 
@@ -76,19 +78,17 @@ void PidLocalPlannerROS::initialize(std::string name, tf2_ros::Buffer* tf, costm
 
     nh.param("k_theta", k_theta_, 0.5);
 
+    // pure steer control
     nh.param("k_p", k_p_, 1.00);
     nh.param("k_i", k_i_, 0.01);
     nh.param("k_d", k_d_, 0.10);
 
-    double controller_freqency;
-    nh.param("/move_base/controller_frequency", controller_freqency, 10.0);
-    d_t_ = 1 / controller_freqency;
+    nh.param("/move_base/controller_frequency", controller_freqency_, 10.0);
+    d_t_ = 1 / controller_freqency_;
 
     odom_helper_ = new base_local_planner::OdometryHelperRos("/odom");
     target_pose_pub_ = nh.advertise<geometry_msgs::PoseStamped>("/target_pose", 10);
     current_pose_pub_ = nh.advertise<geometry_msgs::PoseStamped>("/current_pose", 10);
-
-    base_frame_ = "base_link";
 
     // timer
     cpu_time_sum_.fromNSec(0);

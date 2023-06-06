@@ -157,7 +157,7 @@ private:
 
   double p_window_, o_window_;        // next point distance/turning angle
   double p_precision_, o_precision_;  // goal reached tolerance
-  double d_t_;
+  double controller_freqency_, d_t_;
   double e_v_, e_w_, e_;
   double i_v_, i_w_, i_;
   double max_v_, min_v_, max_v_inc_;  // linear velocity

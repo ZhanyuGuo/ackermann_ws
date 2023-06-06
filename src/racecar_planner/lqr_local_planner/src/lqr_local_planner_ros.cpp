@@ -314,7 +314,7 @@ void LqrLocalPlannerROS::LqrController(double x_d, double y_d, double theta_d, d
 {
   using namespace Eigen;
 
-  MatrixXd Q = MatrixXd::Identity(3, 3);
+  MatrixXd Q = 10 * MatrixXd::Identity(3, 3);
   MatrixXd R = MatrixXd::Identity(2, 2);
 
   Vector3d p_d(x_d, y_d, theta_d);
