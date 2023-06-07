@@ -10,12 +10,8 @@ namespace pid_local_planner
  * @brief Construct a new PidLocalPlannerROS object
  */
 PidLocalPlannerROS::PidLocalPlannerROS()
-  : initialized_(false)
-  , tf_(nullptr)
-  , costmap_ros_(nullptr)
-  , goal_reached_(false)
-  , base_frame_("base_link")
-  // , travel_flag_(false)
+  : initialized_(false), tf_(nullptr), costmap_ros_(nullptr), goal_reached_(false), base_frame_("base_link")
+// , travel_flag_(false)
 {
   // ROS_WARN("PidLocalPlannerROS::PidLocalPlannerROS()");
   // NOTE: afterward, initialize() will be called automatically
@@ -130,11 +126,11 @@ bool PidLocalPlannerROS::setPlan(const std::vector<geometry_msgs::PoseStamped>& 
 
   // if (!travel_flag_)
   // {
-    // travel_flag_ = true;
-    // travel_begin_ = ros::WallTime::now();
+  // travel_flag_ = true;
+  // travel_begin_ = ros::WallTime::now();
 
-    // reset goal_reached_ flag
-    // goal_reached_ = false;
+  // reset goal_reached_ flag
+  // goal_reached_ = false;
   // }
 
   // set new plan
@@ -530,6 +526,10 @@ double PidLocalPlannerROS::getGoalPositionDistance(const geometry_msgs::PoseStam
  */
 void PidLocalPlannerROS::regularizeAngle(double& angle)
 {
-  angle = std::fmod(angle + M_PI, 2 * M_PI) - M_PI;
+  // wrong, not real mod
+  // angle = std::fmod(angle + M_PI, 2 * M_PI) - M_PI;
+
+  // angle = (angle + M_PI - 2.0 * M_PI * std::floor((angle + M_PI) / (2.0 * M_PI))) - M_PI;
+  angle = angle - 2.0 * M_PI * std::floor((angle + M_PI) / (2.0 * M_PI));
 }
 }  // namespace pid_local_planner

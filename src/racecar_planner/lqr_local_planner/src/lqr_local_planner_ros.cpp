@@ -465,6 +465,10 @@ double LqrLocalPlannerROS::getGoalPositionDistance(const geometry_msgs::PoseStam
  */
 void LqrLocalPlannerROS::regularizeAngle(double& angle)
 {
-  angle = std::fmod(angle + M_PI, 2 * M_PI) - M_PI;
+  // wrong, not real mod
+  // angle = std::fmod(angle + M_PI, 2 * M_PI) - M_PI;
+
+  // angle = (angle + M_PI - 2.0 * M_PI * std::floor((angle + M_PI) / (2.0 * M_PI))) - M_PI;
+  angle = angle - 2.0 * M_PI * std::floor((angle + M_PI) / (2.0 * M_PI));
 }
 }  // namespace lqr_local_planner
