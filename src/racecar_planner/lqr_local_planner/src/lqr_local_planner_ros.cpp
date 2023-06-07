@@ -9,9 +9,13 @@ namespace lqr_local_planner
 /**
  * @brief Construct a new LqrLocalPlannerROS object
  */
-LqrLocalPlannerROS::LqrLocalPlannerROS() : costmap_ros_(NULL), tf_(NULL), initialized_(false)
+LqrLocalPlannerROS::LqrLocalPlannerROS()
+  : initialized_(false), tf_(nullptr), costmap_ros_(nullptr), goal_reached_(false)
+// , base_frame_("base_link")
+// , travel_flag_(false)
 {
   // ROS_WARN("LqrLocalPlannerROS::LqrLocalPlannerROS()");
+  // NOTE: afterward, initialize() will be called automatically
 }
 
 /**
@@ -46,9 +50,9 @@ void LqrLocalPlannerROS::initialize(std::string name, tf2_ros::Buffer* tf, costm
 
   if (!initialized_)
   {
+    initialized_ = true;
     tf_ = tf;
     costmap_ros_ = costmap_ros;
-    initialized_ = true;
 
     ros::NodeHandle nh = ros::NodeHandle("~/" + name);
 
@@ -79,6 +83,9 @@ void LqrLocalPlannerROS::initialize(std::string name, tf2_ros::Buffer* tf, costm
 
     // nh.param("k_theta", k_theta_, 0.5);
 
+    nh.param("/move_base/controller_frequency", controller_freqency_, 10.0);
+    d_t_ = 1 / controller_freqency_;
+
     // e_v_ = i_v_ = 0.0;
     // e_w_ = i_w_ = 0.0;
 
@@ -86,17 +93,9 @@ void LqrLocalPlannerROS::initialize(std::string name, tf2_ros::Buffer* tf, costm
     target_pose_pub_ = nh.advertise<geometry_msgs::PoseStamped>("/target_pose", 10);
     current_pose_pub_ = nh.advertise<geometry_msgs::PoseStamped>("/current_pose", 10);
 
-    // base_frame_ = "base_link";
-
-    double controller_freqency;
-    nh.param("/move_base/controller_frequency", controller_freqency, 10.0);
-    d_t_ = 1 / controller_freqency;
-
+    // timer
     cpu_time_sum_.fromNSec(0);
     cpu_time_count_ = 0;
-
-    // set true to init some logs
-    goal_reached_ = true;
 
     ROS_INFO("LQR planner initialized!");
   }
@@ -130,10 +129,18 @@ bool LqrLocalPlannerROS::setPlan(const std::vector<geometry_msgs::PoseStamped>& 
   // ROS_INFO("Got new plan");
 
   // set new plan
+  global_plan_.clear();
   global_plan_ = orig_global_plan;
+
   plan_index_ = 1;  // NOTE: start from 1 to calculate curvature
 
-  // goal_reached_ = false;
+  if (goal_x_ != global_plan_.back().pose.position.x || goal_y_ != global_plan_.back().pose.position.y)
+  {
+    goal_x_ = global_plan_.back().pose.position.x;
+    goal_y_ = global_plan_.back().pose.position.y;
+    goal_reached_ = false;
+    travel_begin_ = ros::WallTime::now();
+  }
 
   return true;
 
@@ -148,43 +155,49 @@ bool LqrLocalPlannerROS::isGoalReached()
 {
   // ROS_WARN("LqrLocalPlannerROS::isGoalReached()");
 
-  if (!initialized_)
+  if (goal_reached_)
   {
-    ROS_ERROR("This planner has not been initialized, please call initialize() before using this planner");
-    return false;
+    ROS_INFO("GOAL Reached!");
+    return true;
   }
+  return false;
 
-  if (!costmap_ros_->getRobotPose(current_ps_))
-  {
-    ROS_ERROR("Could not get robot pose");
-    return false;
-  }
+  // if (!initialized_)
+  // {
+  //   ROS_ERROR("This planner has not been initialized, please call initialize() before using this planner");
+  //   return false;
+  // }
 
-  x_ = current_ps_.pose.position.x;
-  y_ = current_ps_.pose.position.y;
-  theta_ = tf2::getYaw(current_ps_.pose.orientation);  // [-pi, pi]
+  // if (!costmap_ros_->getRobotPose(current_ps_))
+  // {
+  //   ROS_ERROR("Could not get robot pose");
+  //   return false;
+  // }
 
-  if (getGoalPositionDistance(global_plan_.back(), x_, y_) < p_precision_)
-  {
-    goal_reached_ = true;
+  // x_ = current_ps_.pose.position.x;
+  // y_ = current_ps_.pose.position.y;
+  // theta_ = tf2::getYaw(current_ps_.pose.orientation);  // [-pi, pi]
 
-    ros::WallDuration travel_time = ros::WallTime::now() - travel_begin_;
-    ROS_INFO("travel time: %.2f s", travel_time.toSec());
-  }
-  else
-  {
-    if (goal_reached_)
-      travel_begin_ = ros::WallTime::now();
+  // if (getGoalPositionDistance(global_plan_.back(), x_, y_) < p_precision_)
+  // {
+  //   goal_reached_ = true;
 
-    goal_reached_ = false;
-  }
+  //   ros::WallDuration travel_time = ros::WallTime::now() - travel_begin_;
+  //   ROS_INFO("travel time: %.2f s", travel_time.toSec());
+  // }
+  // else
+  // {
+  //   if (goal_reached_)
+  //     travel_begin_ = ros::WallTime::now();
 
-  return goal_reached_;
+  //   goal_reached_ = false;
+  // }
+
+  // return goal_reached_;
 }
 
 /**
- * @brief Given the current position, orientation, and velocity of the robot, compute velocity commands to send to
- * the base
+ * @brief Given the current position, orientation, and velocity of the robot, compute the velocity commands
  * @param cmd_vel will be filled with the velocity command to be passed to the robot base
  * @return  true if a valid trajectory was found, else false
  */
@@ -200,21 +213,21 @@ bool LqrLocalPlannerROS::computeVelocityCommands(geometry_msgs::Twist& cmd_vel)
     return false;
   }
 
-  if (goal_reached_)
-  {
-    ROS_ERROR("LQR planner goal reached without motion.");
-    return false;
-  }
+  // if (goal_reached_)
+  // {
+  //   ROS_ERROR("LQR planner goal reached without motion.");
+  //   return false;
+  // }
 
   // current pose
-  // costmap_ros_->getRobotPose(current_ps_);
-  // x_ = current_ps_.pose.position.x;
-  // y_ = current_ps_.pose.position.y;
-  // theta_ = tf2::getYaw(current_ps_.pose.orientation);  // [-pi, pi]
+  costmap_ros_->getRobotPose(current_ps_);
+  x_ = current_ps_.pose.position.x;
+  y_ = current_ps_.pose.position.y;
+  theta_ = tf2::getYaw(current_ps_.pose.orientation);  // [-pi, pi]
   // ROS_WARN("x = %.2f, y = %.2f, theta = %.2f", x_, y_, theta_);
 
   double x_d, y_d, theta_d;
-  while (plan_index_ < global_plan_.size() - 1)
+  while (plan_index_ < global_plan_.size())
   {
     target_ps_ = global_plan_[plan_index_];
     x_d = target_ps_.pose.position.x;
@@ -223,11 +236,16 @@ bool LqrLocalPlannerROS::computeVelocityCommands(geometry_msgs::Twist& cmd_vel)
     if (std::hypot(x_d - x_, y_d - y_) > p_window_)
       break;
 
-    plan_index_++;
+    ++plan_index_;
   }
 
-  theta_d = atan2((global_plan_[plan_index_ + 1].pose.position.y - y_d),
-                  (global_plan_[plan_index_ + 1].pose.position.x - x_d));
+  int next_plan_index = plan_index_ + 1;
+  if (next_plan_index < global_plan_.size())
+  {
+    theta_d = atan2((global_plan_[next_plan_index].pose.position.y - y_d),
+                    (global_plan_[next_plan_index].pose.position.x - x_d));
+  }
+
   tf2::Quaternion q;
   q.setRPY(0, 0, theta_d);
   tf2::convert(q, target_ps_.pose.orientation);
@@ -238,22 +256,23 @@ bool LqrLocalPlannerROS::computeVelocityCommands(geometry_msgs::Twist& cmd_vel)
   // ROS_WARN("kappa = %.2f, w_d = %.2f", kappa, w_d);
 
   // position reached
-  // if (getGoalPositionDistance(global_plan_.back(), x_, y_) < p_precision_)
-  // {
-  //   cmd_vel.linear.x = 0.0;
-  //   cmd_vel.angular.z = 0.0;
-  //   goal_reached_ = true;
-  //   ros::WallDuration travel_time = ros::WallTime::now() - begin_;
-  //   ROS_INFO("travel time: %.2f s", travel_time.toSec());
-  // }
-  // else
-  // {
-  double v_cmd, w_cmd;
-  LqrController(x_d, y_d, theta_d, v_d, w_d, v_cmd, w_cmd);
+  if (getGoalPositionDistance(global_plan_.back(), x_, y_) < p_precision_)
+  {
+    cmd_vel.linear.x = 0.0;
+    cmd_vel.angular.z = 0.0;
 
-  cmd_vel.linear.x = v_cmd;
-  cmd_vel.angular.z = w_cmd;
-  // }
+    goal_reached_ = true;
+    ros::WallDuration travel_time = ros::WallTime::now() - travel_begin_;
+    ROS_INFO("travel time: %.2f s", travel_time.toSec());
+  }
+  else
+  {
+    double v_cmd, w_cmd;
+    LqrController(x_d, y_d, theta_d, v_d, w_d, v_cmd, w_cmd);
+
+    cmd_vel.linear.x = v_cmd;
+    cmd_vel.angular.z = w_cmd;
+  }
 
   // ROS_INFO("velocity = %.2f m/s, omega = %.2f rad/s", cmd_vel.linear.x, cmd_vel.angular.z);
 
@@ -317,9 +336,18 @@ void LqrLocalPlannerROS::LqrController(double x_d, double y_d, double theta_d, d
   MatrixXd Q = 10 * MatrixXd::Identity(3, 3);
   MatrixXd R = MatrixXd::Identity(2, 2);
 
+  if (std::fabs(theta_ - theta_d) > M_PI)
+  {
+    if (theta_ > theta_d)
+      theta_d += 2 * M_PI;
+    else
+      theta_ += 2 * M_PI;
+  }
+
   Vector3d p_d(x_d, y_d, theta_d);
   Vector2d u_d(v_d, w_d);
   Vector3d e_p = Vector3d(x_, y_, theta_) - p_d;
+
   regularizeAngle(e_p(2));
 
   MatrixXd A = MatrixXd::Zero(3, 3);
@@ -438,10 +466,5 @@ double LqrLocalPlannerROS::getGoalPositionDistance(const geometry_msgs::PoseStam
 void LqrLocalPlannerROS::regularizeAngle(double& angle)
 {
   angle = std::fmod(angle + M_PI, 2 * M_PI) - M_PI;
-  // while (angle > M_PI)
-  //   angle -= 2 * M_PI;
-
-  // while (angle <= -M_PI)
-  //   angle += 2 * M_PI;
 }
 }  // namespace lqr_local_planner

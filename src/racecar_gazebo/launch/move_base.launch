@@ -26,9 +26,9 @@
         <!-- <param name="use_dijkstra" value="false" /> -->
 
         <!-- local planner -->
-        <param name="base_local_planner" value="pid_local_planner/PidLocalPlannerROS" />
+        <!-- <param name="base_local_planner" value="pid_local_planner/PidLocalPlannerROS" /> -->
         <!-- <param name="base_local_planner" value="lqr_local_planner/LqrLocalPlannerROS" /> -->
-        <!-- <param name="base_local_planner" value="mpc_local_planner/MpcLocalPlannerROS" /> -->
+        <param name="base_local_planner" value="mpc_local_planner/MpcLocalPlannerROS" />
         <!-- <param name="base_local_planner" value="teb_local_planner/TebLocalPlannerROS" /> -->
 
         <param name="controller_frequency" value="10.0" />

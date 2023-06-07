@@ -32,7 +32,7 @@ public:
    * @param tf          a pointer to a transform listener
    * @param costmap_ros the cost map to use for assigning costs to trajectories
    */
-  LqrLocalPlannerROS(std::string name, tf2_ros::Buffer* tf, costmap_2d::Costmap2DROS* costmap_ros);
+  // LqrLocalPlannerROS(std::string name, tf2_ros::Buffer* tf, costmap_2d::Costmap2DROS* costmap_ros);
 
   /**
    * @brief Destroy the LqrLocalPlannerROS object
@@ -55,8 +55,13 @@ public:
   bool setPlan(const std::vector<geometry_msgs::PoseStamped>& orig_global_plan);
 
   /**
-   * @brief Given the current position, orientation, and velocity of the robot, compute velocity commands to send to
-   * the base
+   * @brief  Check if the goal pose has been achieved
+   * @return True if achieved, false otherwise
+   */
+  bool isGoalReached();
+
+  /**
+   * @brief Given the current position, orientation, and velocity of the robot, compute the velocity commands
    * @param cmd_vel will be filled with the velocity command to be passed to the robot base
    * @return  true if a valid trajectory was found, else false
    */
@@ -75,21 +80,6 @@ public:
    * @param w_cmd steering angle command result
    */
   void LqrController(double x_d, double y_d, double theta_d, double v_d, double w_d, double& v_cmd, double& w_cmd);
-
-  /**
-   * @brief LQR controller in angular
-   * @param base_odometry odometry of the robot, to get velocity
-   * @param theta_d       desired theta
-   * @param theta         current theta
-   * @return  angular velocity
-   */
-  // double AngularPIDController(nav_msgs::Odometry& base_odometry, double theta_d, double theta);
-
-  /**
-   * @brief  Check if the goal pose has been achieved
-   * @return True if achieved, false otherwise
-   */
-  bool isGoalReached();
 
   /**
    * @brief Get the distance to the goal
@@ -117,11 +107,11 @@ private:
   /**
    * @brief Stop the robot
    */
-  void robotStops()
-  {
-    goal_reached_ = true;
-    ROS_INFO("Robot will stop.");
-  }
+  // void robotStops()
+  // {
+  //   goal_reached_ = true;
+  //   ROS_INFO("Robot will stop.");
+  // }
 
   /**
    * @brief Transform pose to body frame
@@ -152,7 +142,7 @@ private:
 
   double p_window_, o_window_;        // next point distance/turning angle
   double p_precision_, o_precision_;  // goal reached tolerance
-  double d_t_;
+  double controller_freqency_, d_t_;
   // double e_v_, e_w_;
   // double i_v_, i_w_;
   double max_v_, min_v_, max_v_inc_;  // linear velocity
@@ -171,6 +161,8 @@ private:
   ros::WallDuration cpu_time_sum_;
   unsigned int cpu_time_count_;
   ros::WallTime travel_begin_;
+
+  double goal_x_, goal_y_;
 };
 };  // namespace lqr_local_planner
 

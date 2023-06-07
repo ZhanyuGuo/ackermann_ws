@@ -4,8 +4,8 @@
     <!-- <arg name="world_name" default="racecar_ar" /> -->
     <!-- <arg name="world_name" default="racecar_parking_1" /> -->
     <!-- <arg name="world_name" default="racecar_tunnel" /> -->
-    <arg name="world_name" default="racecar_walker" />
-    <!-- <arg name="world_name" default="scene2" /> -->
+    <!-- <arg name="world_name" default="racecar_walker" /> -->
+    <arg name="world_name" default="scene2" />
 
     <arg name="publish_tf_map" default="true" />
 
