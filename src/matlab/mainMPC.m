@@ -32,7 +32,7 @@ params.dddelta_max = pi / 4;
 params.dim_X = length(X_0);
 params.dim_U = length(U_0);
 
-params.pre_step = 10;
+params.pre_step = 20;
 params.con_step = 5;
 params.rho = 10;
 params.Q = 10 * eye(params.dim_X * params.pre_step);
